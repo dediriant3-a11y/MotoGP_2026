@@ -6,7 +6,7 @@
     <title>Dashboard Telkom Infrastructure - MotoGP Mandalika 2026</title>
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- PapaParse CDN untuk membaca CSV -->
+    <!-- PapaParse CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root {
@@ -169,7 +169,6 @@
             border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 12px 16px;
-            margin-bottom: 0;
         }
 
         .section-title {
@@ -280,41 +279,41 @@
                     <p>Dashboard Monitoring Integrasi Infrastruktur & Layanan (Sheet2)</p>
                 </div>
             </div>
-            <div class="status-badge" id="dataStatus">Memuat data dari Google Sheets (Sheet2)...</div>
+            <div class="status-badge" id="dataStatus">Connecting to Sheet2...</div>
         </header>
 
         <!-- KPI Summary Cards -->
         <div class="kpi-grid">
             <div class="kpi-card">
                 <div class="kpi-title">Total Kebutuhan</div>
-                <div class="kpi-value" id="kpiTotal">-</div>
-                <div class="kpi-sub" id="kpiVenueCount">- Venue Utama</div>
+                <div class="kpi-value" id="kpiTotal">0</div>
+                <div class="kpi-sub" id="kpiVenueCount">0 Venue Utama</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-title">Achievement (Done)</div>
-                <div class="kpi-value" id="kpiAch" style="color: #34d399;">-</div>
-                <div class="kpi-sub" id="kpiDoneSub">- Selesai</div>
+                <div class="kpi-value" id="kpiAch" style="color: #34d399;">0.00%</div>
+                <div class="kpi-sub" id="kpiDoneSub">0 Selesai</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-title">Input Order</div>
-                <div class="kpi-value" id="kpiInputOrder" style="color: #fbbf24;">-</div>
-                <div class="kpi-sub" id="kpiInputOrderSub">- Antrean</div>
+                <div class="kpi-value" id="kpiInputOrder" style="color: #fbbf24;">0</div>
+                <div class="kpi-sub" id="kpiInputOrderSub">0.00% Antrean</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-title">On Going Progress</div>
-                <div class="kpi-value" id="kpiOgp" style="color: #38bdf8;">-</div>
+                <div class="kpi-value" id="kpiOgp" style="color: #38bdf8;">0</div>
                 <div class="kpi-sub">Layanan Berjalan</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-title">Canceled</div>
-                <div class="kpi-value" id="kpiCancel" style="color: #f43f5e;">-</div>
+                <div class="kpi-value" id="kpiCancel" style="color: #f43f5e;">0</div>
                 <div class="kpi-sub">Layanan Dibatalkan</div>
             </div>
         </div>
 
-        <!-- Layout Utama -->
+        <!-- Main Grid Layout -->
         <div class="main-grid">
-            <!-- Tabel Data -->
+            <!-- Data Table -->
             <div class="section-card">
                 <div class="section-title">Ringkasan Kebutuhan & Achievement Done per Venue (Sheet2)</div>
                 <div class="table-responsive">
@@ -350,7 +349,7 @@
                 </div>
             </div>
 
-            <!-- Diagram Grafis -->
+            <!-- Charts -->
             <div class="charts-column">
                 <div class="section-card">
                     <div class="section-title">Top 5 Venue Kebutuhan Terbanyak</div>
@@ -373,54 +372,58 @@
         </div>
     </div>
 
-    <!-- Script Pengolahan Data & Chart -->
+    <!-- Script Fetching & Rendering -->
     <script>
-        const publishedCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS5lT9nqQFaO2f0Hl3WtpIL5Vq35tmHMmuCeHOuNbv2B33t3UPk11ysHKoiiKaSnsGuBHtTi5fh6zdR/pub?gid=1416043534&single=true&output=csv';
+        // Endpoint GViz langsung dari Google Sheets (gid 1416043534 = Sheet2)
+        const gvizUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS5lT9nqQFaO2f0Hl3WtpIL5Vq35tmHMmuCeHOuNbv2B33t3UPk11ysHKoiiKaSnsGuBHtTi5fh6zdR/gviz/tq?tqx=out:csv&gid=1416043534';
 
         let venueChartInstance = null;
         let statusChartInstance = null;
 
         async function fetchSpreadsheetData() {
             try {
-                const response = await fetch(publishedCsvUrl);
-                const csvData = await response.text();
+                // Tambahkan timestamp untuk menghindari cache lama
+                const cacheBusterUrl = gvizUrl + '&_ts=' + new Date().getTime();
+                const response = await fetch(cacheBusterUrl);
+                
+                if (!response.ok) {
+                    throw new Error('Response network error');
+                }
 
-                Papa.parse(csvData, {
+                const csvText = await response.text();
+
+                Papa.parse(csvText, {
                     header: false,
                     skipEmptyLines: true,
                     complete: function(results) {
                         if (results.data && results.data.length > 0) {
                             processRawData(results.data);
                         } else {
-                            document.getElementById('dataStatus').innerText = "Data CSV kosong";
+                            document.getElementById('dataStatus').innerText = "Data Kosong di Sheet2";
                         }
                     }
                 });
             } catch (error) {
                 console.error("Gagal mengambil data Sheet2:", error);
-                document.getElementById('dataStatus').innerText = "Gagal memuat data dari Sheet2";
+                document.getElementById('dataStatus').innerText = "Akses Diblokir / Sheet2 Belum Diumumkan";
             }
         }
 
         function processRawData(rows) {
             let venueMap = {};
-            
-            let totalKebutuhan = 0;
-            let totalInputOrder = 0;
-            let totalOgp = 0;
-            let totalCancel = 0;
-            let totalDone = 0;
+            let totalKebutuhan = 0, totalInputOrder = 0, totalOgp = 0, totalCancel = 0, totalDone = 0;
 
-            const headers = rows[0].map(h => String(h).trim().toUpperCase());
+            // Membaca header baris pertama
+            const headers = rows[0].map(h => String(h).replace(/"/g, '').trim().toUpperCase());
             
-            let idxVenue = headers.findIndex(h => h.includes('VENUE') || h.includes('LOKASI') || h.includes('LOCATION'));
+            let idxVenue = headers.findIndex(h => h.includes('VENUE') || h.includes('LOKASI'));
             let idxStatus = headers.findIndex(h => h.includes('STATUS') || h.includes('PROGRESS') || h.includes('KET'));
-            
             let idxInput = headers.findIndex(h => h.includes('INPUT') || h.includes('ORDER'));
             let idxOgp = headers.findIndex(h => h.includes('OGP') || h.includes('ON GOING'));
-            let idxCancel = headers.findIndex(h => h.includes('CANCEL'));
+            let idxCancel = headers.findIndex(h => h.includes('CANCEL') || h.includes('BATAL'));
             let idxDone = headers.findIndex(h => h.includes('DONE') || h.includes('SELESAI'));
 
+            // Fallback default index
             if (idxVenue === -1) idxVenue = 0;
             if (idxStatus === -1) idxStatus = 1;
 
@@ -428,7 +431,7 @@
                 const row = rows[i];
                 if (!row || row.length === 0) continue;
 
-                const venueVal = row[idxVenue] ? String(row[idxVenue]).trim() : '';
+                const venueVal = row[idxVenue] ? String(row[idxVenue]).replace(/"/g, '').trim() : '';
                 if (!venueVal || venueVal.toUpperCase() === 'TOTAL' || venueVal.toUpperCase().includes('TOTAL ALL')) continue;
 
                 const venueName = venueVal.toUpperCase();
@@ -442,6 +445,7 @@
                 const valCancel = idxCancel !== -1 ? parseInt(row[idxCancel]) || 0 : 0;
                 const valDone = idxDone !== -1 ? parseInt(row[idxDone]) || 0 : 0;
 
+                // Jika format berupa tabel ringkasan angka
                 if (valInput || valOgp || valCancel || valDone) {
                     venueMap[venueName].inputOrder += valInput;
                     venueMap[venueName].ogp += valOgp;
@@ -449,7 +453,8 @@
                     venueMap[venueName].done += valDone;
                     venueMap[venueName].total += (valInput + valOgp + valCancel + valDone);
                 } else {
-                    const statusVal = row[idxStatus] ? String(row[idxStatus]).trim().toUpperCase() : '';
+                    // Jika format berupa daftar item per baris
+                    const statusVal = row[idxStatus] ? String(row[idxStatus]).replace(/"/g, '').trim().toUpperCase() : '';
                     
                     if (statusVal.includes('DONE') || statusVal.includes('SELESAI')) {
                         venueMap[venueName].done++;
@@ -493,7 +498,7 @@
                 `;
             });
 
-            document.getElementById('tableBody').innerHTML = tableHtml || `<tr><td colspan="7" style="text-align:center;">Data kosong atau format baris tidak dapat dibaca</td></tr>`;
+            document.getElementById('tableBody').innerHTML = tableHtml || `<tr><td colspan="7" style="text-align:center;">Data kosong atau nama kolom di Sheet2 tidak sesuai</td></tr>`;
 
             const totalAch = totalKebutuhan > 0 ? ((totalDone / totalKebutuhan) * 100).toFixed(2) : "0.00";
             document.getElementById('footTotal').innerText = totalKebutuhan;
