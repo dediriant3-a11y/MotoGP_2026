@@ -277,10 +277,10 @@
                 <div class="logo-badge">MotoGP™</div>
                 <div class="title-group">
                     <h1>MOTOGP MANDALIKA 2026</h1>
-                    <p>Dashboard Monitoring Integrasi Infrastruktur & Layanan Telekomunikasi</p>
+                    <p>Dashboard Monitoring Integrasi Infrastruktur & Layanan (Sheet2)</p>
                 </div>
             </div>
-            <div class="status-badge" id="dataStatus">Memuat data dari Google Sheets...</div>
+            <div class="status-badge" id="dataStatus">Memuat data dari Google Sheets (Sheet2)...</div>
         </header>
 
         <!-- KPI Summary Cards -->
@@ -316,7 +316,7 @@
         <div class="main-grid">
             <!-- Tabel Data -->
             <div class="section-card">
-                <div class="section-title">Ringkasan Kebutuhan & Achievement Done per Venue</div>
+                <div class="section-title">Ringkasan Kebutuhan & Achievement Done per Venue (Sheet2)</div>
                 <div class="table-responsive">
                     <table>
                         <thead>
@@ -369,19 +369,18 @@
         </div>
 
         <div class="footer">
-            Dashboard Infrastructure MotoGP Mandalika 2026 • Telkom Indonesia Synchronized
+            Dashboard Infrastructure MotoGP Mandalika 2026 • Live Sync Sheet2
         </div>
     </div>
 
     <!-- Script Pengolahan Data & Chart -->
     <script>
-        // Link CSV Google Sheets yang telah dipublikasikan
-        const publishedCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS5lT9nqQFaO2f0Hl3WtpIL5Vq35tmHMmuCeHOuNbv2B33t3UPk11ysHKoiiKaSnsGuBHtTi5fh6zdR/pub?output=csv';
+        // URL khusus Sheet2 (gid=1416043534)
+        const publishedCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS5lT9nqQFaO2f0Hl3WtpIL5Vq35tmHMmuCeHOuNbv2B33t3UPk11ysHKoiiKaSnsGuBHtTi5fh6zdR/pub?gid=1416043534&single=true&output=csv';
 
         let venueChartInstance = null;
         let statusChartInstance = null;
 
-        // Fungsi Membaca dan Mengolah CSV
         async function fetchSpreadsheetData() {
             try {
                 const response = await fetch(publishedCsvUrl);
@@ -395,12 +394,11 @@
                     }
                 });
             } catch (error) {
-                console.error("Gagal mengambil data:", error);
-                document.getElementById('dataStatus').innerText = "Gagal memuat data dari Spreadsheet";
+                console.error("Gagal mengambil data Sheet2:", error);
+                document.getElementById('dataStatus').innerText = "Gagal memuat data dari Sheet2";
             }
         }
 
-        // Helper fungsi pencarian nama kolom secara acak huruf besar/kecil
         function getColumnValue(row, possibleNames) {
             const keys = Object.keys(row);
             for (let name of possibleNames) {
@@ -422,10 +420,8 @@
             let totalDone = 0;
 
             data.forEach(row => {
-                const venue = getColumnValue(row, ['Venue', 'VENUE', 'Location', 'Lokasi']);
-                
-                // Jika sheet berbentuk list detail per item layanan
-                const status = getColumnValue(row, ['Status', 'STATUS', 'Progress', 'PROGRESS']);
+                const venue = getColumnValue(row, ['Venue', 'VENUE', 'Location', 'Lokasi', 'Nama Venue']);
+                const status = getColumnValue(row, ['Status', 'STATUS', 'Progress', 'PROGRESS', 'Keterangan']);
 
                 if (venue && venue.trim() !== '') {
                     const venueName = venue.trim().toUpperCase();
@@ -434,7 +430,6 @@
                         venueMap[venueName] = { inputOrder: 0, ogp: 0, cancel: 0, done: 0, total: 0 };
                     }
 
-                    // Cek jika baris memiliki angka jumlah per status langsung (Tabel Agregat)
                     const valInput = parseInt(getColumnValue(row, ['Input Order', 'INPUT ORDER']) || 0);
                     const valOgp = parseInt(getColumnValue(row, ['OGP', 'On Going Progress']) || 0);
                     const valCancel = parseInt(getColumnValue(row, ['Cancel', 'CANCELED']) || 0);
@@ -447,19 +442,17 @@
                         venueMap[venueName].done += valDone;
                         venueMap[venueName].total += (valInput + valOgp + valCancel + valDone);
                     } else if (status) {
-                        // Jika baris berisi per-item layanan dengan kolom status
                         const st = status.trim().toUpperCase();
                         if (st.includes('DONE')) venueMap[venueName].done++;
                         else if (st.includes('OGP') || st.includes('ON GOING')) venueMap[venueName].ogp++;
                         else if (st.includes('CANCEL')) venueMap[venueName].cancel++;
-                        else venueMap[venueName].inputOrder++; // Default
+                        else venueMap[venueName].inputOrder++;
                         
                         venueMap[venueName].total++;
                     }
                 }
             });
 
-            // Susun HTML Tabel
             let tableHtml = '';
             let venueList = [];
 
@@ -489,9 +482,8 @@
                 `;
             });
 
-            document.getElementById('tableBody').innerHTML = tableHtml || `<tr><td colspan="7" style="text-align:center;">Data kosong atau format kolom tidak sesuai</td></tr>`;
+            document.getElementById('tableBody').innerHTML = tableHtml || `<tr><td colspan="7" style="text-align:center;">Data kosong atau nama kolom di Sheet2 tidak sesuai</td></tr>`;
 
-            // Update Total Footer
             const totalAch = totalKebutuhan > 0 ? ((totalDone / totalKebutuhan) * 100).toFixed(2) : "0.00";
             document.getElementById('footTotal').innerText = totalKebutuhan;
             document.getElementById('footInputOrder').innerText = totalInputOrder;
@@ -500,7 +492,6 @@
             document.getElementById('footDone').innerText = totalDone;
             document.getElementById('footAch').innerText = `${totalAch}%`;
 
-            // Update KPI Cards
             const venueCount = Object.keys(venueMap).length;
             const inputOrderPercent = totalKebutuhan > 0 ? ((totalInputOrder / totalKebutuhan) * 100).toFixed(2) : "0.00";
 
@@ -516,9 +507,8 @@
             document.getElementById('kpiOgp').innerText = totalOgp;
             document.getElementById('kpiCancel').innerText = totalCancel;
 
-            document.getElementById('dataStatus').innerText = `Data Source: Live Spreadsheet (${totalKebutuhan} Total Items)`;
+            document.getElementById('dataStatus').innerText = `Data Source: Live Sheet2 (${totalKebutuhan} Items)`;
 
-            // Update Chart Data
             venueList.sort((a, b) => b.total - a.total);
             const top5Venues = venueList.slice(0, 5);
 
@@ -530,7 +520,6 @@
         }
 
         function renderCharts(venueLabels, venueValues, statusData) {
-            // Chart 1: Bar Chart
             const ctx1 = document.getElementById('venueChart').getContext('2d');
             if (venueChartInstance) venueChartInstance.destroy();
             venueChartInstance = new Chart(ctx1, {
@@ -555,7 +544,6 @@
                 }
             });
 
-            // Chart 2: Doughnut Chart
             const ctx2 = document.getElementById('statusChart').getContext('2d');
             if (statusChartInstance) statusChartInstance.destroy();
             statusChartInstance = new Chart(ctx2, {
@@ -586,7 +574,6 @@
             });
         }
 
-        // Jalankan fetch saat halaman selesai dimuat
         document.addEventListener('DOMContentLoaded', fetchSpreadsheetData);
     </script>
 </body>
