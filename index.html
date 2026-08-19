@@ -6,6 +6,8 @@
     <title>Dashboard Telkom Infrastructure - MotoGP Mandalika 2026</title>
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- PapaParse CDN untuk membaca CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root {
             --bg-color: #0b0e14;
@@ -178,7 +180,7 @@
             border-left: 3px solid var(--accent-red);
         }
 
-        /* Data Table Styles (No internal vertical scroll) */
+        /* Data Table Styles */
         .table-responsive {
             overflow: visible;
         }
@@ -265,7 +267,7 @@
 <body>
 
     <div class="container">
-        <!-- Header dengan Logo Telkom Indonesia & MotoGP -->
+        <!-- Header -->
         <header class="header">
             <div class="brand">
                 <div class="telkom-logo">
@@ -278,41 +280,41 @@
                     <p>Dashboard Monitoring Integrasi Infrastruktur & Layanan Telekomunikasi</p>
                 </div>
             </div>
-            <div class="status-badge">Data Source: Live Spreadsheet (219 Total Items)</div>
+            <div class="status-badge" id="dataStatus">Memuat data dari Google Sheets...</div>
         </header>
 
         <!-- KPI Summary Cards -->
         <div class="kpi-grid">
             <div class="kpi-card">
                 <div class="kpi-title">Total Kebutuhan</div>
-                <div class="kpi-value">219</div>
-                <div class="kpi-sub">12 Venue Utama</div>
+                <div class="kpi-value" id="kpiTotal">-</div>
+                <div class="kpi-sub" id="kpiVenueCount">- Venue Utama</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-title">Achievement (Done)</div>
-                <div class="kpi-value" style="color: #34d399;">0.46%</div>
-                <div class="kpi-sub">1 Selesai (Race Control)</div>
+                <div class="kpi-value" id="kpiAch" style="color: #34d399;">-</div>
+                <div class="kpi-sub" id="kpiDoneSub">- Selesai</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-title">Input Order</div>
-                <div class="kpi-value" style="color: #fbbf24;">216</div>
-                <div class="kpi-sub">98.63% Antrean</div>
+                <div class="kpi-value" id="kpiInputOrder" style="color: #fbbf24;">-</div>
+                <div class="kpi-sub" id="kpiInputOrderSub">- Antrean</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-title">On Going Progress</div>
-                <div class="kpi-value" style="color: #38bdf8;">1</div>
-                <div class="kpi-sub">Race Control (Astinet)</div>
+                <div class="kpi-value" id="kpiOgp" style="color: #38bdf8;">-</div>
+                <div class="kpi-sub">Layanan Berjalan</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-title">Canceled</div>
-                <div class="kpi-value" style="color: #f43f5e;">1</div>
-                <div class="kpi-sub">Race Control (WMS)</div>
+                <div class="kpi-value" id="kpiCancel" style="color: #f43f5e;">-</div>
+                <div class="kpi-sub">Layanan Dibatalkan</div>
             </div>
         </div>
 
-        <!-- Layout Utama Fit-to-Screen -->
+        <!-- Layout Utama -->
         <div class="main-grid">
-            <!-- Tabel Tanpa Scroll internal -->
+            <!-- Tabel Data -->
             <div class="section-card">
                 <div class="section-title">Ringkasan Kebutuhan & Achievement Done per Venue</div>
                 <div class="table-responsive">
@@ -328,132 +330,27 @@
                                 <th style="text-align: right;">Achievement (%)</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="tableBody">
                             <tr>
-                                <td><strong>PIT BUILDING</strong></td>
-                                <td style="text-align: center; font-weight:700;">54</td>
-                                <td style="text-align: center;">54</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: right;"><span class="badge-zero">0.00%</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>PADDOCK</strong></td>
-                                <td style="text-align: center; font-weight:700;">46</td>
-                                <td style="text-align: center;">46</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: right;"><span class="badge-zero">0.00%</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>VIP DELUXE</strong></td>
-                                <td style="text-align: center; font-weight:700;">36</td>
-                                <td style="text-align: center;">36</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: right;"><span class="badge-zero">0.00%</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>GATE</strong></td>
-                                <td style="text-align: center; font-weight:700;">21</td>
-                                <td style="text-align: center;">21</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: right;"><span class="badge-zero">0.00%</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>MEDIA CENTER</strong></td>
-                                <td style="text-align: center; font-weight:700;">19</td>
-                                <td style="text-align: center;">19</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: right;"><span class="badge-zero">0.00%</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>RACE CONTROL</strong></td>
-                                <td style="text-align: center; font-weight:700;">16</td>
-                                <td style="text-align: center;">13</td>
-                                <td style="text-align: center; color: #38bdf8; font-weight:bold;">1</td>
-                                <td style="text-align: center; color: #f43f5e; font-weight:bold;">1</td>
-                                <td style="text-align: center; color: #34d399; font-weight:bold;">1</td>
-                                <td style="text-align: right;"><span class="badge-achievement">6.25%</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>MATARAM</strong></td>
-                                <td style="text-align: center; font-weight:700;">7</td>
-                                <td style="text-align: center;">7</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: right;"><span class="badge-zero">0.00%</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>TV COMPOUND</strong></td>
-                                <td style="text-align: center; font-weight:700;">7</td>
-                                <td style="text-align: center;">7</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: right;"><span class="badge-zero">0.00%</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>BAZAR</strong></td>
-                                <td style="text-align: center; font-weight:700;">5</td>
-                                <td style="text-align: center;">5</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: right;"><span class="badge-zero">0.00%</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>RED GATE</strong></td>
-                                <td style="text-align: center; font-weight:700;">4</td>
-                                <td style="text-align: center;">4</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: right;"><span class="badge-zero">0.00%</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>GRANDSTAND</strong></td>
-                                <td style="text-align: center; font-weight:700;">2</td>
-                                <td style="text-align: center;">2</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: right;"><span class="badge-zero">0.00%</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>MEDICAL CENTER</strong></td>
-                                <td style="text-align: center; font-weight:700;">2</td>
-                                <td style="text-align: center;">2</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: center;">0</td>
-                                <td style="text-align: right;"><span class="badge-zero">0.00%</span></td>
+                                <td colspan="7" style="text-align:center; padding: 20px;">Memuat data...</td>
                             </tr>
                         </tbody>
                         <tfoot>
                             <tr>
                                 <td>TOTAL ALL VENUE</td>
-                                <td style="text-align: center; font-size: 13px;">219</td>
-                                <td style="text-align: center;">216</td>
-                                <td style="text-align: center; color: #38bdf8;">1</td>
-                                <td style="text-align: center; color: #f43f5e;">1</td>
-                                <td style="text-align: center; color: #34d399;">1</td>
-                                <td style="text-align: right; color: #34d399; font-size: 13px;">0.46%</td>
+                                <td style="text-align: center; font-size: 13px;" id="footTotal">0</td>
+                                <td style="text-align: center;" id="footInputOrder">0</td>
+                                <td style="text-align: center; color: #38bdf8;" id="footOgp">0</td>
+                                <td style="text-align: center; color: #f43f5e;" id="footCancel">0</td>
+                                <td style="text-align: center; color: #34d399;" id="footDone">0</td>
+                                <td style="text-align: right; color: #34d399; font-size: 13px;" id="footAch">0.00%</td>
                             </tr>
                         </tfoot>
                     </table>
                 </div>
             </div>
 
-            <!-- Diagram Grafis Compact -->
+            <!-- Diagram Grafis -->
             <div class="charts-column">
                 <div class="section-card">
                     <div class="section-title">Top 5 Venue Kebutuhan Terbanyak</div>
@@ -476,63 +373,221 @@
         </div>
     </div>
 
-    <!-- Script Chart.js -->
+    <!-- Script Pengolahan Data & Chart -->
     <script>
-        // Chart Venue Terbanyak
-        const ctx1 = document.getElementById('venueChart').getContext('2d');
-        new Chart(ctx1, {
-            type: 'bar',
-            data: {
-                labels: ['Pit Building', 'Paddock', 'VIP Deluxe', 'Gate', 'Media Center'],
-                datasets: [{
-                    label: 'Jumlah Layanan',
-                    data: [54, 46, 36, 21, 19],
-                    backgroundColor: [
-                        '#e11d48',
-                        '#0284c7',
-                        '#f59e0b',
-                        '#84cc16',
-                        '#8b5cf6'
-                    ],
-                    borderRadius: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { display: false } },
-                    y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#334155' } }
+        // Link CSV Google Sheets yang telah dipublikasikan
+        const publishedCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS5lT9nqQFaO2f0Hl3WtpIL5Vq35tmHMmuCeHOuNbv2B33t3UPk11ysHKoiiKaSnsGuBHtTi5fh6zdR/pub?output=csv';
+
+        let venueChartInstance = null;
+        let statusChartInstance = null;
+
+        // Fungsi Membaca dan Mengolah CSV
+        async function fetchSpreadsheetData() {
+            try {
+                const response = await fetch(publishedCsvUrl);
+                const csvData = await response.text();
+
+                Papa.parse(csvData, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        processAndRender(results.data);
+                    }
+                });
+            } catch (error) {
+                console.error("Gagal mengambil data:", error);
+                document.getElementById('dataStatus').innerText = "Gagal memuat data dari Spreadsheet";
+            }
+        }
+
+        // Helper fungsi pencarian nama kolom secara acak huruf besar/kecil
+        function getColumnValue(row, possibleNames) {
+            const keys = Object.keys(row);
+            for (let name of possibleNames) {
+                const foundKey = keys.find(k => k.trim().toLowerCase() === name.toLowerCase());
+                if (foundKey && row[foundKey] !== undefined) {
+                    return row[foundKey];
                 }
             }
-        });
+            return null;
+        }
 
-        // Chart Status Integrasi
-        const ctx2 = document.getElementById('statusChart').getContext('2d');
-        new Chart(ctx2, {
-            type: 'doughnut',
-            data: {
-                labels: ['Input Order (216)', 'Done (1)', 'OGP (1)', 'Cancel (1)'],
-                datasets: [{
-                    data: [216, 1, 1, 1],
-                    backgroundColor: ['#f59e0b', '#10b981', '#38bdf8', '#e11d48'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        labels: { color: '#f8fafc', font: { size: 11 } }
+        function processAndRender(data) {
+            let venueMap = {};
+
+            let totalKebutuhan = 0;
+            let totalInputOrder = 0;
+            let totalOgp = 0;
+            let totalCancel = 0;
+            let totalDone = 0;
+
+            data.forEach(row => {
+                const venue = getColumnValue(row, ['Venue', 'VENUE', 'Location', 'Lokasi']);
+                
+                // Jika sheet berbentuk list detail per item layanan
+                const status = getColumnValue(row, ['Status', 'STATUS', 'Progress', 'PROGRESS']);
+
+                if (venue && venue.trim() !== '') {
+                    const venueName = venue.trim().toUpperCase();
+
+                    if (!venueMap[venueName]) {
+                        venueMap[venueName] = { inputOrder: 0, ogp: 0, cancel: 0, done: 0, total: 0 };
+                    }
+
+                    // Cek jika baris memiliki angka jumlah per status langsung (Tabel Agregat)
+                    const valInput = parseInt(getColumnValue(row, ['Input Order', 'INPUT ORDER']) || 0);
+                    const valOgp = parseInt(getColumnValue(row, ['OGP', 'On Going Progress']) || 0);
+                    const valCancel = parseInt(getColumnValue(row, ['Cancel', 'CANCELED']) || 0);
+                    const valDone = parseInt(getColumnValue(row, ['Done', 'DONE']) || 0);
+
+                    if (valInput || valOgp || valCancel || valDone) {
+                        venueMap[venueName].inputOrder += valInput;
+                        venueMap[venueName].ogp += valOgp;
+                        venueMap[venueName].cancel += valCancel;
+                        venueMap[venueName].done += valDone;
+                        venueMap[venueName].total += (valInput + valOgp + valCancel + valDone);
+                    } else if (status) {
+                        // Jika baris berisi per-item layanan dengan kolom status
+                        const st = status.trim().toUpperCase();
+                        if (st.includes('DONE')) venueMap[venueName].done++;
+                        else if (st.includes('OGP') || st.includes('ON GOING')) venueMap[venueName].ogp++;
+                        else if (st.includes('CANCEL')) venueMap[venueName].cancel++;
+                        else venueMap[venueName].inputOrder++; // Default
+                        
+                        venueMap[venueName].total++;
                     }
                 }
-            }
-        });
+            });
+
+            // Susun HTML Tabel
+            let tableHtml = '';
+            let venueList = [];
+
+            Object.keys(venueMap).forEach(vName => {
+                const v = venueMap[vName];
+                const ach = v.total > 0 ? ((v.done / v.total) * 100).toFixed(2) : "0.00";
+                const badgeClass = parseFloat(ach) > 0 ? 'badge-achievement' : 'badge-zero';
+
+                totalKebutuhan += v.total;
+                totalInputOrder += v.inputOrder;
+                totalOgp += v.ogp;
+                totalCancel += v.cancel;
+                totalDone += v.done;
+
+                venueList.push({ name: vName, total: v.total });
+
+                tableHtml += `
+                    <tr>
+                        <td><strong>${vName}</strong></td>
+                        <td style="text-align: center; font-weight:700;">${v.total}</td>
+                        <td style="text-align: center;">${v.inputOrder}</td>
+                        <td style="text-align: center; color: #38bdf8;">${v.ogp}</td>
+                        <td style="text-align: center; color: #f43f5e;">${v.cancel}</td>
+                        <td style="text-align: center; color: #34d399;">${v.done}</td>
+                        <td style="text-align: right;"><span class="${badgeClass}">${ach}%</span></td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('tableBody').innerHTML = tableHtml || `<tr><td colspan="7" style="text-align:center;">Data kosong atau format kolom tidak sesuai</td></tr>`;
+
+            // Update Total Footer
+            const totalAch = totalKebutuhan > 0 ? ((totalDone / totalKebutuhan) * 100).toFixed(2) : "0.00";
+            document.getElementById('footTotal').innerText = totalKebutuhan;
+            document.getElementById('footInputOrder').innerText = totalInputOrder;
+            document.getElementById('footOgp').innerText = totalOgp;
+            document.getElementById('footCancel').innerText = totalCancel;
+            document.getElementById('footDone').innerText = totalDone;
+            document.getElementById('footAch').innerText = `${totalAch}%`;
+
+            // Update KPI Cards
+            const venueCount = Object.keys(venueMap).length;
+            const inputOrderPercent = totalKebutuhan > 0 ? ((totalInputOrder / totalKebutuhan) * 100).toFixed(2) : "0.00";
+
+            document.getElementById('kpiTotal').innerText = totalKebutuhan;
+            document.getElementById('kpiVenueCount').innerText = `${venueCount} Venue Utama`;
+
+            document.getElementById('kpiAch').innerText = `${totalAch}%`;
+            document.getElementById('kpiDoneSub').innerText = `${totalDone} Selesai`;
+
+            document.getElementById('kpiInputOrder').innerText = totalInputOrder;
+            document.getElementById('kpiInputOrderSub').innerText = `${inputOrderPercent}% Antrean`;
+
+            document.getElementById('kpiOgp').innerText = totalOgp;
+            document.getElementById('kpiCancel').innerText = totalCancel;
+
+            document.getElementById('dataStatus').innerText = `Data Source: Live Spreadsheet (${totalKebutuhan} Total Items)`;
+
+            // Update Chart Data
+            venueList.sort((a, b) => b.total - a.total);
+            const top5Venues = venueList.slice(0, 5);
+
+            renderCharts(
+                top5Venues.map(x => x.name),
+                top5Venues.map(x => x.total),
+                [totalInputOrder, totalDone, totalOgp, totalCancel]
+            );
+        }
+
+        function renderCharts(venueLabels, venueValues, statusData) {
+            // Chart 1: Bar Chart
+            const ctx1 = document.getElementById('venueChart').getContext('2d');
+            if (venueChartInstance) venueChartInstance.destroy();
+            venueChartInstance = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: venueLabels,
+                    datasets: [{
+                        label: 'Jumlah Layanan',
+                        data: venueValues,
+                        backgroundColor: ['#e11d48', '#0284c7', '#f59e0b', '#84cc16', '#8b5cf6'],
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { display: false } },
+                        y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#334155' } }
+                    }
+                }
+            });
+
+            // Chart 2: Doughnut Chart
+            const ctx2 = document.getElementById('statusChart').getContext('2d');
+            if (statusChartInstance) statusChartInstance.destroy();
+            statusChartInstance = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: [
+                        `Input Order (${statusData[0]})`, 
+                        `Done (${statusData[1]})`, 
+                        `OGP (${statusData[2]})`, 
+                        `Cancel (${statusData[3]})`
+                    ],
+                    datasets: [{
+                        data: statusData,
+                        backgroundColor: ['#f59e0b', '#10b981', '#38bdf8', '#e11d48'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: { color: '#f8fafc', font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Jalankan fetch saat halaman selesai dimuat
+        document.addEventListener('DOMContentLoaded', fetchSpreadsheetData);
     </script>
 </body>
 </html>
