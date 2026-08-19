@@ -375,7 +375,6 @@
 
     <!-- Script Pengolahan Data & Chart -->
     <script>
-        // URL khusus Sheet2 (gid=1416043534)
         const publishedCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS5lT9nqQFaO2f0Hl3WtpIL5Vq35tmHMmuCeHOuNbv2B33t3UPk11ysHKoiiKaSnsGuBHtTi5fh6zdR/pub?gid=1416043534&single=true&output=csv';
 
         let venueChartInstance = null;
@@ -387,10 +386,14 @@
                 const csvData = await response.text();
 
                 Papa.parse(csvData, {
-                    header: true,
+                    header: false,
                     skipEmptyLines: true,
                     complete: function(results) {
-                        processAndRender(results.data);
+                        if (results.data && results.data.length > 0) {
+                            processRawData(results.data);
+                        } else {
+                            document.getElementById('dataStatus').innerText = "Data CSV kosong";
+                        }
                     }
                 });
             } catch (error) {
@@ -399,59 +402,67 @@
             }
         }
 
-        function getColumnValue(row, possibleNames) {
-            const keys = Object.keys(row);
-            for (let name of possibleNames) {
-                const foundKey = keys.find(k => k.trim().toLowerCase() === name.toLowerCase());
-                if (foundKey && row[foundKey] !== undefined) {
-                    return row[foundKey];
-                }
-            }
-            return null;
-        }
-
-        function processAndRender(data) {
+        function processRawData(rows) {
             let venueMap = {};
-
+            
             let totalKebutuhan = 0;
             let totalInputOrder = 0;
             let totalOgp = 0;
             let totalCancel = 0;
             let totalDone = 0;
 
-            data.forEach(row => {
-                const venue = getColumnValue(row, ['Venue', 'VENUE', 'Location', 'Lokasi', 'Nama Venue']);
-                const status = getColumnValue(row, ['Status', 'STATUS', 'Progress', 'PROGRESS', 'Keterangan']);
+            const headers = rows[0].map(h => String(h).trim().toUpperCase());
+            
+            let idxVenue = headers.findIndex(h => h.includes('VENUE') || h.includes('LOKASI') || h.includes('LOCATION'));
+            let idxStatus = headers.findIndex(h => h.includes('STATUS') || h.includes('PROGRESS') || h.includes('KET'));
+            
+            let idxInput = headers.findIndex(h => h.includes('INPUT') || h.includes('ORDER'));
+            let idxOgp = headers.findIndex(h => h.includes('OGP') || h.includes('ON GOING'));
+            let idxCancel = headers.findIndex(h => h.includes('CANCEL'));
+            let idxDone = headers.findIndex(h => h.includes('DONE') || h.includes('SELESAI'));
 
-                if (venue && venue.trim() !== '') {
-                    const venueName = venue.trim().toUpperCase();
+            if (idxVenue === -1) idxVenue = 0;
+            if (idxStatus === -1) idxStatus = 1;
 
-                    if (!venueMap[venueName]) {
-                        venueMap[venueName] = { inputOrder: 0, ogp: 0, cancel: 0, done: 0, total: 0 };
-                    }
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                if (!row || row.length === 0) continue;
 
-                    const valInput = parseInt(getColumnValue(row, ['Input Order', 'INPUT ORDER']) || 0);
-                    const valOgp = parseInt(getColumnValue(row, ['OGP', 'On Going Progress']) || 0);
-                    const valCancel = parseInt(getColumnValue(row, ['Cancel', 'CANCELED']) || 0);
-                    const valDone = parseInt(getColumnValue(row, ['Done', 'DONE']) || 0);
+                const venueVal = row[idxVenue] ? String(row[idxVenue]).trim() : '';
+                if (!venueVal || venueVal.toUpperCase() === 'TOTAL' || venueVal.toUpperCase().includes('TOTAL ALL')) continue;
 
-                    if (valInput || valOgp || valCancel || valDone) {
-                        venueMap[venueName].inputOrder += valInput;
-                        venueMap[venueName].ogp += valOgp;
-                        venueMap[venueName].cancel += valCancel;
-                        venueMap[venueName].done += valDone;
-                        venueMap[venueName].total += (valInput + valOgp + valCancel + valDone);
-                    } else if (status) {
-                        const st = status.trim().toUpperCase();
-                        if (st.includes('DONE')) venueMap[venueName].done++;
-                        else if (st.includes('OGP') || st.includes('ON GOING')) venueMap[venueName].ogp++;
-                        else if (st.includes('CANCEL')) venueMap[venueName].cancel++;
-                        else venueMap[venueName].inputOrder++;
-                        
-                        venueMap[venueName].total++;
-                    }
+                const venueName = venueVal.toUpperCase();
+
+                if (!venueMap[venueName]) {
+                    venueMap[venueName] = { inputOrder: 0, ogp: 0, cancel: 0, done: 0, total: 0 };
                 }
-            });
+
+                const valInput = idxInput !== -1 ? parseInt(row[idxInput]) || 0 : 0;
+                const valOgp = idxOgp !== -1 ? parseInt(row[idxOgp]) || 0 : 0;
+                const valCancel = idxCancel !== -1 ? parseInt(row[idxCancel]) || 0 : 0;
+                const valDone = idxDone !== -1 ? parseInt(row[idxDone]) || 0 : 0;
+
+                if (valInput || valOgp || valCancel || valDone) {
+                    venueMap[venueName].inputOrder += valInput;
+                    venueMap[venueName].ogp += valOgp;
+                    venueMap[venueName].cancel += valCancel;
+                    venueMap[venueName].done += valDone;
+                    venueMap[venueName].total += (valInput + valOgp + valCancel + valDone);
+                } else {
+                    const statusVal = row[idxStatus] ? String(row[idxStatus]).trim().toUpperCase() : '';
+                    
+                    if (statusVal.includes('DONE') || statusVal.includes('SELESAI')) {
+                        venueMap[venueName].done++;
+                    } else if (statusVal.includes('OGP') || statusVal.includes('ON GOING') || statusVal.includes('PROGRESS')) {
+                        venueMap[venueName].ogp++;
+                    } else if (statusVal.includes('CANCEL') || statusVal.includes('BATAL')) {
+                        venueMap[venueName].cancel++;
+                    } else {
+                        venueMap[venueName].inputOrder++;
+                    }
+                    venueMap[venueName].total++;
+                }
+            }
 
             let tableHtml = '';
             let venueList = [];
@@ -482,7 +493,7 @@
                 `;
             });
 
-            document.getElementById('tableBody').innerHTML = tableHtml || `<tr><td colspan="7" style="text-align:center;">Data kosong atau nama kolom di Sheet2 tidak sesuai</td></tr>`;
+            document.getElementById('tableBody').innerHTML = tableHtml || `<tr><td colspan="7" style="text-align:center;">Data kosong atau format baris tidak dapat dibaca</td></tr>`;
 
             const totalAch = totalKebutuhan > 0 ? ((totalDone / totalKebutuhan) * 100).toFixed(2) : "0.00";
             document.getElementById('footTotal').innerText = totalKebutuhan;
