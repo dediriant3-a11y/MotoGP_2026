@@ -388,13 +388,14 @@
   <script>
     const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS5lT9nqQFaO2f0Hl3WtpIL5Vq35tmHMmuCeHOuNbv2B33t3UPk11ysHKoiiKaSnsGuBHtTi5fh6zdR/pub?gid=670940536&single=true&output=csv';
 
+    // Daftar Venue Utama yang harus diprioritaskan di paling atas
     const mainVenuesList = ['MEDIA CENTER', 'PADDOCK', 'PIT BUILDING', 'RACE CONTROL', 'TV COMPOUND', 'VIP DELUXE'];
     let venueChart, statusChart;
 
     Papa.parse(csvUrl, {
       download: true,
       header: false,
-      skipEmptyLines: true,
+      skipEmptyLines: false,
       complete: function(results) {
         renderDashboard(results.data);
       }
@@ -414,37 +415,49 @@
     function renderDashboard(data) {
       if (!data || data.length === 0) return;
 
+      let colVenue = 0;
+      let colLayanan = 1;
+      let colDone = -1;
+      let colInput = -1;
+      let colOgp = -1;
+
+      // 1. Deteksi Indeks Kolom Secara Dinamis
+      data.forEach((row) => {
+        row.forEach((cell, idx) => {
+          let str = cell.trim().toUpperCase();
+          if (str === 'DONE') colDone = idx;
+          if (str === 'INPUT ORDER') colInput = idx;
+          if (str === 'OGP') colOgp = idx;
+        });
+      });
+
+      // Fallback jika tidak terdeteksi otomatis
+      if (colDone === -1) colDone = 3;
+      if (colInput === -1) colInput = 4;
+      if (colOgp === -1) colOgp = 5;
+
       let parsedRows = [];
       let currentVenue = '';
 
-      // Tentukan Indeks Kolom Berdasarkan Header atau Default Struktur Gambar
-      let colDone = 2, colInput = 3, colOgp = 4;
-
+      // 2. Parsing Data Per Baris
       data.forEach((row) => {
-        // Abaikan baris header atas/kosong
-        let rowStr = row.join(' ').toUpperCase();
-        if (rowStr.includes('COUNTA OF') || rowStr.includes('STATUS INTEGRASI')) {
-          row.forEach((cell, idx) => {
-            let c = cell.trim().toUpperCase();
-            if (c === 'DONE') colDone = idx;
-            if (c === 'INPUT ORDER') colInput = idx;
-            if (c === 'OGP') colOgp = idx;
-          });
+        let firstCol = row[colVenue] ? row[colVenue].trim() : '';
+        let secondCol = row[colLayanan] ? row[colLayanan].trim() : '';
+
+        // Hapus karakter buletin atau dash pembuka pivot (-)
+        firstCol = firstCol.replace(/^[\-\+\s]+/, '').trim();
+
+        // Lewati header atau baris kalkulasi pivot
+        if (firstCol.toUpperCase().includes('COUNTA OF') || secondCol.toUpperCase().includes('LAYANAN') || secondCol.toUpperCase().includes('STATUS INTEGRASI')) {
           return;
         }
 
-        let firstCol = row[0] ? row[0].trim() : '';
-        let secondCol = row[1] ? row[1].trim() : '';
-
-        // Hapus simbol minus (-) dari penamaan venue jika ada dari hasil pivot
-        firstCol = firstCol.replace(/^[\-\+\s]+/, '').trim();
-
-        if (firstCol && !firstCol.toUpperCase().includes('TOTAL')) {
+        if (firstCol && !firstCol.toUpperCase().includes('GRAND TOTAL') && !firstCol.toUpperCase().includes('TOTAL')) {
           currentVenue = firstCol;
         }
 
         const layanan = secondCol;
-        if (!layanan) return;
+        if (!layanan || layanan === '0') return;
 
         let done = cleanNum(row[colDone]);
         let input = cleanNum(row[colInput]);
@@ -466,14 +479,14 @@
         }
       });
 
-      // Urutkan: Venue Utama di Paling Atas
+      // 3. Pengurutan: Prioritaskan Venue Utama di Atas
       parsedRows.sort((a, b) => {
         if (a.isMain && !b.isMain) return -1;
         if (!a.isMain && b.isMain) return 1;
         return a.venue.localeCompare(b.venue);
       });
 
-      // Hitung Ringkasan
+      // 4. Kalkulasi Total Keseluruhan
       let totalDoneSum = 0, totalInputSum = 0, totalOgpSum = 0, totalOverallSum = 0;
       let venueDataMap = {};
 
@@ -510,7 +523,7 @@
         tBody.appendChild(tr);
       });
 
-      // Tambahkan Baris Total Keseluruhan di Paling Bawah Tabel
+      // 5. Baris Total di Bawah Tabel
       const achieveOverallPct = totalOverallSum > 0 ? ((totalDoneSum / totalOverallSum) * 100).toFixed(1).replace('.', ',') + '%' : '0,0%';
       const trTotal = document.createElement('tr');
       trTotal.className = 'total-row';
@@ -524,26 +537,31 @@
       `;
       tBody.appendChild(trTotal);
 
-      // Render Nilai pada Ringkasan Card
+      // 6. Update Nilai Pada Card Metrics Ringkasan
       document.getElementById('total-order').innerText = totalOverallSum;
       document.getElementById('total-input').innerText = totalInputSum;
       document.getElementById('total-ogp').innerText = totalOgpSum;
       document.getElementById('total-done').innerText = totalDoneSum;
       document.getElementById('total-achieve').innerText = achieveOverallPct;
 
-      // Render Charts
-      const venueLabels = Object.keys(venueDataMap);
-      const chartDone = venueLabels.map(v => venueDataMap[v].done);
-      const chartOgp = venueLabels.map(v => venueDataMap[v].ogp);
-      const chartInput = venueLabels.map(v => venueDataMap[v].input);
+      // 7. Render Charts dengan Urutan Venue Utama Di Depan
+      const sortedVenues = Object.keys(venueDataMap).sort((a, b) => {
+        if (venueDataMap[a].isMain && !venueDataMap[b].isMain) return -1;
+        if (!venueDataMap[a].isMain && venueDataMap[b].isMain) return 1;
+        return a.localeCompare(b);
+      });
 
-      // Stacked Bar Chart (Urutan Sesuai Prioritas Venue Utama)
+      const chartDone = sortedVenues.map(v => venueDataMap[v].done);
+      const chartOgp = sortedVenues.map(v => venueDataMap[v].ogp);
+      const chartInput = sortedVenues.map(v => venueDataMap[v].input);
+
+      // Bar Chart Per Venue
       const ctxVenue = document.getElementById('venueChart').getContext('2d');
       if (venueChart) venueChart.destroy();
       venueChart = new Chart(ctxVenue, {
         type: 'bar',
         data: {
-          labels: venueLabels,
+          labels: sortedVenues,
           datasets: [
             { label: 'DONE', data: chartDone, backgroundColor: '#059669' },
             { label: 'OGP', data: chartOgp, backgroundColor: '#d97706' },
@@ -558,7 +576,7 @@
         }
       });
 
-      // Doughnut Chart Total Status
+      // Doughnut Chart Persentase Status
       const ctxStatus = document.getElementById('statusChart').getContext('2d');
       if (statusChart) statusChart.destroy();
       statusChart = new Chart(ctxStatus, {
