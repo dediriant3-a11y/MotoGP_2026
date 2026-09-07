@@ -303,6 +303,7 @@
 </head>
 <body>
 
+  <!-- Header Section -->
   <div class="header">
     <div class="header-left">
       <div class="header-logos">
@@ -317,6 +318,7 @@
     <div class="badge-event">MOTOGP MANDALIKA 2026</div>
   </div>
 
+  <!-- Key Metrics Summary -->
   <div class="metrics-grid">
     <div class="metric-card total">
       <h3>Total Order/Site</h3>
@@ -340,6 +342,7 @@
     </div>
   </div>
 
+  <!-- Charts Section -->
   <div class="charts-grid">
     <div class="chart-card">
       <h2>Status Integrasi Per Venue</h2>
@@ -356,6 +359,7 @@
     </div>
   </div>
 
+  <!-- Detail Table Section -->
   <div class="table-card">
     <div class="table-header-flex">
       <h2>Rincian Data Per Venue & Layanan</h2>
@@ -411,78 +415,77 @@
       if (!data || data.length === 0) return;
 
       let parsedRows = [];
-      let totalDoneSum = 0, totalInputSum = 0, totalOgpSum = 0, totalOverallSum = 219;
       let currentVenue = '';
 
-      data.forEach(row => {
-        const firstCol = row[0] ? row[0].trim() : '';
-        const secondCol = row[1] ? row[1].trim() : '';
+      // Tentukan Indeks Kolom Berdasarkan Header atau Default Struktur Gambar
+      let colDone = 2, colInput = 3, colOgp = 4;
 
-        // Deteksi Baris Total
-        if (firstCol.toUpperCase().includes('TOTAL') || secondCol.toUpperCase().includes('TOTAL')) {
-          row.forEach(cell => {
-            let num = cleanNum(cell);
-            if (num > 0) {
-              if (num === 219 || num > 100) totalOverallSum = num;
-            }
+      data.forEach((row) => {
+        // Abaikan baris header atas/kosong
+        let rowStr = row.join(' ').toUpperCase();
+        if (rowStr.includes('COUNTA OF') || rowStr.includes('STATUS INTEGRASI')) {
+          row.forEach((cell, idx) => {
+            let c = cell.trim().toUpperCase();
+            if (c === 'DONE') colDone = idx;
+            if (c === 'INPUT ORDER') colInput = idx;
+            if (c === 'OGP') colOgp = idx;
           });
           return;
         }
 
-        // Tentukan Nama Venue
-        if (firstCol && !firstCol.toUpperCase().includes('VENUE') && !firstCol.toUpperCase().includes('LAYANAN')) {
+        let firstCol = row[0] ? row[0].trim() : '';
+        let secondCol = row[1] ? row[1].trim() : '';
+
+        // Hapus simbol minus (-) dari penamaan venue jika ada dari hasil pivot
+        firstCol = firstCol.replace(/^[\-\+\s]+/, '').trim();
+
+        if (firstCol && !firstCol.toUpperCase().includes('TOTAL')) {
           currentVenue = firstCol;
         }
 
         const layanan = secondCol;
-        if (!layanan || layanan.toUpperCase().includes('LAYANAN')) return;
+        if (!layanan) return;
 
-        let numValues = [];
-        row.forEach((cell, idx) => {
-          if (idx >= 2) {
-            let val = cell ? cell.trim() : '';
-            if (val !== '' && val !== '-') {
-              numValues.push(val);
-            }
-          }
-        });
+        let done = cleanNum(row[colDone]);
+        let input = cleanNum(row[colInput]);
+        let ogp = cleanNum(row[colOgp]);
+        let total = done + input + ogp;
+        let achievePct = total > 0 ? ((done / total) * 100).toFixed(1).replace('.', ',') + '%' : '0,0%';
 
-        let done = cleanNum(numValues[0]);
-        let achieve = numValues[1] || '0,0%';
-        let input = cleanNum(numValues[2]);
-        let ogp = cleanNum(numValues[3]);
-        let total = cleanNum(numValues[4]) || (done + input + ogp);
-
-        totalDoneSum += done;
-        totalInputSum += input;
-        totalOgpSum += ogp;
-
-        parsedRows.push({
-          venue: currentVenue,
-          isMain: isMainVenue(currentVenue),
-          layanan: layanan,
-          done: done,
-          achieve: achieve,
-          input: input,
-          ogp: ogp,
-          total: total
-        });
+        if (total > 0) {
+          parsedRows.push({
+            venue: currentVenue,
+            isMain: isMainVenue(currentVenue),
+            layanan: layanan,
+            done: done,
+            input: input,
+            ogp: ogp,
+            total: total,
+            achievePct: achievePct
+          });
+        }
       });
 
-      // Urutkan: Venue Utama di atas, lalu Venue Pendukung di bawahnya
+      // Urutkan: Venue Utama di Paling Atas
       parsedRows.sort((a, b) => {
         if (a.isMain && !b.isMain) return -1;
         if (!a.isMain && b.isMain) return 1;
         return a.venue.localeCompare(b.venue);
       });
 
-      // Render Table
+      // Hitung Ringkasan
+      let totalDoneSum = 0, totalInputSum = 0, totalOgpSum = 0, totalOverallSum = 0;
+      let venueDataMap = {};
+
       const tBody = document.getElementById('table-body');
       tBody.innerHTML = '';
 
-      let venueDataMap = {};
-
       parsedRows.forEach(item => {
+        totalDoneSum += item.done;
+        totalInputSum += item.input;
+        totalOgpSum += item.ogp;
+        totalOverallSum += item.total;
+
         if (!venueDataMap[item.venue]) {
           venueDataMap[item.venue] = { done: 0, input: 0, ogp: 0, isMain: item.isMain };
         }
@@ -499,7 +502,7 @@
           <td><strong>${venueDisplayName}</strong></td>
           <td>${item.layanan}</td>
           <td>${item.done > 0 ? `<span class="badge badge-done">${item.done}</span>` : '-'}</td>
-          <td class="achieve-text">${item.achieve}</td>
+          <td class="achieve-text">${item.achievePct}</td>
           <td>${item.input > 0 ? `<span class="badge badge-input">${item.input}</span>` : '-'}</td>
           <td>${item.ogp > 0 ? `<span class="badge badge-ogp">${item.ogp}</span>` : '-'}</td>
           <td>${item.total}</td>
@@ -507,11 +510,10 @@
         tBody.appendChild(tr);
       });
 
-      // Baris Total
+      // Tambahkan Baris Total Keseluruhan di Paling Bawah Tabel
+      const achieveOverallPct = totalOverallSum > 0 ? ((totalDoneSum / totalOverallSum) * 100).toFixed(1).replace('.', ',') + '%' : '0,0%';
       const trTotal = document.createElement('tr');
       trTotal.className = 'total-row';
-      const achieveOverallPct = ((totalDoneSum / totalOverallSum) * 100).toFixed(1).replace('.', ',') + '%';
-
       trTotal.innerHTML = `
         <td colspan="2">TOTAL KESELURUHAN</td>
         <td>${totalDoneSum}</td>
@@ -522,7 +524,7 @@
       `;
       tBody.appendChild(trTotal);
 
-      // Render Cards
+      // Render Nilai pada Ringkasan Card
       document.getElementById('total-order').innerText = totalOverallSum;
       document.getElementById('total-input').innerText = totalInputSum;
       document.getElementById('total-ogp').innerText = totalOgpSum;
@@ -535,7 +537,7 @@
       const chartOgp = venueLabels.map(v => venueDataMap[v].ogp);
       const chartInput = venueLabels.map(v => venueDataMap[v].input);
 
-      // Stacked Bar Chart
+      // Stacked Bar Chart (Urutan Sesuai Prioritas Venue Utama)
       const ctxVenue = document.getElementById('venueChart').getContext('2d');
       if (venueChart) venueChart.destroy();
       venueChart = new Chart(ctxVenue, {
@@ -556,7 +558,7 @@
         }
       });
 
-      // Doughnut Chart
+      // Doughnut Chart Total Status
       const ctxStatus = document.getElementById('statusChart').getContext('2d');
       if (statusChart) statusChart.destroy();
       statusChart = new Chart(ctxStatus, {
