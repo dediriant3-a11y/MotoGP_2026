@@ -13,7 +13,7 @@
       --primary: #1e3a8a;
       --primary-light: #2563eb;
       --bg: #0f172a;
-      --card-bg: rgba(255, 255, 255, 0.92); /* Semi-transparan agar data terbaca jelas */
+      --card-bg: rgba(255, 255, 255, 0.92);
       --text-main: #0f172a;
       --text-muted: #475569;
       --border: #cbd5e1;
@@ -43,7 +43,7 @@
       min-height: 100vh;
     }
 
-    /* Background Transparan Poster MotoGP */
+    /* Background Transparan Poster MotoGP (Perbaikan Path Folder images/) */
     body::before {
       content: '';
       position: fixed;
@@ -51,11 +51,11 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background-image: url('bg-motogp.jpg'); /* Nama file poster */
+      background-image: url('images/bg-motogp.jpg');
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
-      opacity: 0.18; /* Tingkat transparansi gambar (0.15 - 0.25 disarankan) */
+      opacity: 0.22; /* Kontras keterbacaan */
       z-index: -1;
     }
 
@@ -308,12 +308,12 @@
 </head>
 <body>
 
-  <!-- Header Section dengan Logo -->
+  <!-- Header Section dengan Logo (Perbaikan Path Folder images/) -->
   <div class="header">
     <div class="header-left">
       <div class="header-logos">
-        <img src="logo-telkom.png" alt="Telkom Indonesia" class="logo-img">
-        <img src="logo-motogp.png" alt="MotoGP" class="logo-img logo-motogp">
+        <img src="images/logo-telkom.png" alt="Telkom Indonesia" class="logo-img">
+        <img src="images/logo-motogp.png" alt="MotoGP" class="logo-img logo-motogp">
       </div>
       <div class="header-title">
         <h1>Dashboard Resume Integrasi Layanan</h1>
