@@ -6,6 +6,8 @@
   <title>Dashboard Interactive Resume - MotoGP Mandalika 2026</title>
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- PapaParse CDN untuk membaca CSV -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -22,7 +24,6 @@
       --color-ogp: #d97706;
       --color-input: #0284c7;
       
-      /* Accent for Main Venues */
       --main-venue-bg: rgba(254, 252, 232, 0.95);
       --main-venue-border: #fef08a;
       --main-venue-badge: #78350f;
@@ -43,7 +44,6 @@
       min-height: 100vh;
     }
 
-    /* Background Transparan Poster MotoGP (Perbaikan Path Folder images/) */
     body::before {
       content: '';
       position: fixed;
@@ -55,11 +55,10 @@
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
-      opacity: 0.22; /* Kontras keterbacaan */
+      opacity: 0.22;
       z-index: -1;
     }
 
-    /* Header Section & Logos */
     .header {
       display: flex;
       justify-content: space-between;
@@ -121,7 +120,6 @@
       font-weight: 700;
     }
 
-    /* Key Metrics Cards (5 Kolom Sejajar) */
     .metrics-grid {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
@@ -175,7 +173,6 @@
       font-weight: 700;
     }
 
-    /* Charts Section */
     .charts-grid {
       display: grid;
       grid-template-columns: 2fr 1fr;
@@ -210,7 +207,6 @@
       height: 320px;
     }
 
-    /* Table Section */
     .table-card {
       background-color: var(--card-bg);
       border-radius: 12px;
@@ -266,7 +262,6 @@
       border-bottom: 1px solid var(--border);
     }
 
-    /* Style khusus venue utama */
     tr.row-main-venue {
       background-color: var(--main-venue-bg);
     }
@@ -308,7 +303,7 @@
 </head>
 <body>
 
-  <!-- Header Section dengan Logo (Perbaikan Path Folder images/) -->
+  <!-- Header Section -->
   <div class="header">
     <div class="header-left">
       <div class="header-logos">
@@ -317,39 +312,38 @@
       </div>
       <div class="header-title">
         <h1>Dashboard Resume Integrasi Layanan</h1>
-        <p>Sumber Data: Google Spreadsheet (Sheet RESUME - MotoGP Mandalika 2026)</p>
+        <p>Sumber Data: Live Google Spreadsheet (Sheet RESUME)</p>
       </div>
     </div>
     <div class="badge-event">MOTOGP MANDALIKA 2026</div>
   </div>
 
-  <!-- Key Metrics Summary -->
+  <!-- Key Metrics Summary (Dynamic) -->
   <div class="metrics-grid">
     <div class="metric-card total">
       <h3>Total Order/Site</h3>
-      <div class="value" style="color: var(--primary-light)">168</div>
+      <div class="value" id="total-order" style="color: var(--primary-light)">-</div>
     </div>
     <div class="metric-card input">
       <h3>INPUT ORDER</h3>
-      <div class="value" style="color: var(--color-input)">53</div>
+      <div class="value" id="total-input" style="color: var(--color-input)">-</div>
     </div>
     <div class="metric-card ogp">
       <h3>OGP (On Going)</h3>
-      <div class="value" style="color: var(--color-ogp)">50</div>
+      <div class="value" id="total-ogp" style="color: var(--color-ogp)">-</div>
     </div>
     <div class="metric-card done">
       <h3>DONE</h3>
-      <div class="value" style="color: var(--color-done)">64</div>
+      <div class="value" id="total-done" style="color: var(--color-done)">-</div>
     </div>
     <div class="metric-card achieve">
       <h3>ACHIEVE DONE (%)</h3>
-      <div class="value" style="color: var(--color-done)">38,1%</div>
+      <div class="value" id="total-achieve" style="color: var(--color-done)">-</div>
     </div>
   </div>
 
   <!-- Charts Section -->
   <div class="charts-grid">
-    <!-- Stacked Bar Chart per Venue -->
     <div class="chart-card">
       <h2>Status Integrasi Per Venue</h2>
       <div class="chart-container">
@@ -357,7 +351,6 @@
       </div>
     </div>
 
-    <!-- Doughnut Chart overall status -->
     <div class="chart-card">
       <h2>Persentase Total Status</h2>
       <div class="chart-container">
@@ -373,131 +366,186 @@
       <span class="legend-main-venue">★ VENUE UTAMA</span>
     </div>
     <div class="table-container">
-      <table>
+      <table id="data-table">
         <thead>
-          <tr>
-            <th>VENUE</th>
-            <th>LAYANAN</th>
-            <th>DONE</th>
-            <th>ACHIEVE (%)</th>
-            <th>INPUT ORDER</th>
-            <th>OGP</th>
-            <th>TOTAL</th>
+          <tr id="table-head">
+            <th>Loading data...</th>
           </tr>
         </thead>
-        <tbody>
-          <!-- VENUE UTAMA -->
-          <tr class="row-main-venue"><td rowspan="2"><strong>MEDIA CENTER ★</strong></td><td>ASTINET</td><td><span class="badge badge-done">1</span></td><td class="achieve-text">50,0%</td><td>-</td><td><span class="badge badge-ogp">1</span></td><td>2</td></tr>
-          <tr class="row-main-venue"><td>WMS</td><td><span class="badge badge-done">6</span></td><td class="achieve-text">35,3%</td><td><span class="badge badge-input">6</span></td><td><span class="badge badge-ogp">5</span></td><td>17</td></tr>
-
-          <tr class="row-main-venue"><td rowspan="4"><strong>PADDOCK ★</strong></td><td>ASTINET</td><td><span class="badge badge-done">8</span></td><td class="achieve-text">32,0%</td><td><span class="badge badge-input">7</span></td><td><span class="badge badge-ogp">10</span></td><td>25</td></tr>
-          <tr class="row-main-venue"><td>ASTINET LITE</td><td><span class="badge badge-done">1</span></td><td class="achieve-text">20,0%</td><td><span class="badge badge-input">3</span></td><td><span class="badge badge-ogp">1</span></td><td>5</td></tr>
-          <tr class="row-main-venue"><td>VOICE</td><td>-</td><td class="achieve-text">0,0%</td><td><span class="badge badge-input">1</span></td><td>-</td><td>1</td></tr>
-          <tr class="row-main-venue"><td>WMS</td><td><span class="badge badge-done">5</span></td><td class="achieve-text">33,3%</td><td><span class="badge badge-input">5</span></td><td><span class="badge badge-ogp">5</span></td><td>15</td></tr>
-
-          <tr class="row-main-venue"><td rowspan="2"><strong>PIT BUILDING ★</strong></td><td>ASTINET</td><td><span class="badge badge-done">5</span></td><td class="achieve-text">35,7%</td><td><span class="badge badge-input">4</span></td><td><span class="badge badge-ogp">5</span></td><td>14</td></tr>
-          <tr class="row-main-venue"><td>WMS</td><td><span class="badge badge-done">13</span></td><td class="achieve-text">32,5%</td><td><span class="badge badge-input">14</span></td><td><span class="badge badge-ogp">13</span></td><td>40</td></tr>
-
-          <tr class="row-main-venue"><td rowspan="2"><strong>RACE CONTROL ★</strong></td><td>ASTINET</td><td>-</td><td class="achieve-text">0,0%</td><td><span class="badge badge-input">1</span></td><td><span class="badge badge-ogp">1</span></td><td>2</td></tr>
-          <tr class="row-main-venue"><td>WMS</td><td><span class="badge badge-done">5</span></td><td class="achieve-text">35,7%</td><td><span class="badge badge-input">4</span></td><td><span class="badge badge-ogp">4</span></td><td>14</td></tr>
-
-          <tr class="row-main-venue"><td rowspan="3"><strong>TV COMPOUND ★</strong></td><td>ASTINET</td><td>-</td><td class="achieve-text">0,0%</td><td>-</td><td><span class="badge badge-ogp">1</span></td><td>1</td></tr>
-          <tr class="row-main-venue"><td>DWDM</td><td><span class="badge badge-done">1</span></td><td class="achieve-text">50,0%</td><td><span class="badge badge-input">1</span></td><td>-</td><td>2</td></tr>
-          <tr class="row-main-venue"><td>WMS</td><td>-</td><td class="achieve-text">0,0%</td><td><span class="badge badge-input">1</span></td><td><span class="badge badge-ogp">1</span></td><td>2</td></tr>
-
-          <tr class="row-main-venue"><td rowspan="3"><strong>VIP DELUXE ★</strong></td><td>ASTINET</td><td><span class="badge badge-done">2</span></td><td class="achieve-text">28,6%</td><td><span class="badge badge-input">3</span></td><td><span class="badge badge-ogp">2</span></td><td>7</td></tr>
-          <tr class="row-main-venue"><td>VPN</td><td><span class="badge badge-done">1</span></td><td class="achieve-text">33,3%</td><td><span class="badge badge-input">1</span></td><td><span class="badge badge-ogp">1</span></td><td>3</td></tr>
-          <tr class="row-main-venue"><td>WMS</td><td><span class="badge badge-done">9</span></td><td class="achieve-text">34,6%</td><td><span class="badge badge-input">9</span></td><td><span class="badge badge-ogp">8</span></td><td>26</td></tr>
-
-          <!-- VENUE PENDUKUNG -->
-          <tr><td rowspan="2"><strong>BAZAR</strong></td><td>ASTINET LITE</td><td>-</td><td class="achieve-text">0,0%</td><td><span class="badge badge-input">1</span></td><td>-</td><td>1</td></tr>
-          <tr><td>WMS</td><td><span class="badge badge-done">1</span></td><td class="achieve-text">25,0%</td><td><span class="badge badge-input">1</span></td><td><span class="badge badge-ogp">2</span></td><td>4</td></tr>
-
-          <tr><td rowspan="3"><strong>GATE</strong></td><td>ASTINET</td><td><span class="badge badge-done">1</span></td><td class="achieve-text">16,7%</td><td><span class="badge badge-input">3</span></td><td><span class="badge badge-ogp">2</span></td><td>6</td></tr>
-          <tr><td>ASTINET LITE</td><td>-</td><td class="achieve-text">0,0%</td><td><span class="badge badge-input">1</span></td><td>-</td><td>1</td></tr>
-          <tr><td>WMS</td><td><span class="badge badge-done">6</span></td><td class="achieve-text">42,9%</td><td><span class="badge badge-input">2</span></td><td><span class="badge badge-ogp">6</span></td><td>14</td></tr>
-
-          <tr><td><strong>GRANDSTAND</strong></td><td>ASTINET</td><td><span class="badge badge-done">1</span></td><td class="achieve-text">50,0%</td><td>-</td><td><span class="badge badge-ogp">1</span></td><td>2</td></tr>
-
-          <tr><td rowspan="4"><strong>MATARAM</strong></td><td>ASTINET</td><td><span class="badge badge-done">1</span></td><td class="achieve-text">50,0%</td><td><span class="badge badge-input">1</span></td><td>-</td><td>2</td></tr>
-          <tr><td>ASTINET LITE</td><td><span class="badge badge-done">1</span></td><td class="achieve-text">50,0%</td><td>-</td><td><span class="badge badge-ogp">1</span></td><td>2</td></tr>
-          <tr><td>VPN</td><td>-</td><td class="achieve-text">0,0%</td><td>-</td><td><span class="badge badge-ogp">1</span></td><td>1</td></tr>
-          <tr><td>WMS</td><td>-</td><td class="achieve-text">0,0%</td><td><span class="badge badge-input">1</span></td><td><span class="badge badge-ogp">1</span></td><td>2</td></tr>
-
-          <tr><td><strong>MEDICAL CENTER</strong></td><td>WMS</td><td><span class="badge badge-done">1</span></td><td class="achieve-text">50,0%</td><td>-</td><td><span class="badge badge-ogp">1</span></td><td>2</td></tr>
-
-          <tr><td><strong>RED GATE</strong></td><td>WMS</td><td>-</td><td class="achieve-text">0,0%</td><td><span class="badge badge-input">2</span></td><td><span class="badge badge-ogp">2</span></td><td>4</td></tr>
-
-          <!-- TOTAL ROW -->
-          <tr class="total-row">
-            <td colspan="2">TOTAL KESELURUHAN</td>
-            <td>64</td>
-            <td class="achieve-text">38,1%</td>
-            <td>53</td>
-            <td>50</td>
-            <td>168</td>
-          </tr>
+        <tbody id="table-body">
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- Script Chart Initialization -->
   <script>
-    const venues = [
-      'MEDIA CENTER', 'PADDOCK', 'PIT BUILDING', 'RACE CONTROL', 'TV COMPOUND', 'VIP DELUXE',
-      'BAZAR', 'GATE', 'GRANDSTAND', 'MATARAM', 'MEDICAL CENTER', 'RED GATE'
-    ];
+    const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS5lT9nqQFaO2f0Hl3WtpIL5Vq35tmHMmuCeHOuNbv2B33t3UPk11ysHKoiiKaSnsGuBHtTi5fh6zdR/pub?gid=670940536&single=true&output=csv';
 
-    const dataDone = [7, 14, 18, 5, 1, 12, 1, 7, 1, 2, 1, 0];
-    const dataOgp = [6, 16, 18, 5, 2, 11, 2, 8, 1, 3, 1, 2];
-    const dataInput = [6, 16, 18, 5, 2, 13, 2, 6, 0, 2, 0, 2];
+    let venueChart, statusChart;
 
-    // Chart 1: Bar Chart Stacked per Venue
-    const ctxVenue = document.getElementById('venueChart').getContext('2d');
-    new Chart(ctxVenue, {
-      type: 'bar',
-      data: {
-        labels: venues,
-        datasets: [
-          { label: 'DONE', data: dataDone, backgroundColor: '#059669' },
-          { label: 'OGP', data: dataOgp, backgroundColor: '#d97706' },
-          { label: 'INPUT ORDER', data: dataInput, backgroundColor: '#0284c7' }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'top' }
+    Papa.parse(csvUrl, {
+      download: true,
+      header: false,
+      skipEmptyLines: true,
+      complete: function(results) {
+        renderDashboard(results.data);
+      }
+    });
+
+    function renderDashboard(data) {
+      if (!data || data.length < 2) return;
+
+      // Bersihkan baris kosong
+      const cleanData = data.filter(row => row.some(cell => cell.trim() !== ''));
+
+      // Ekstrak Header
+      let headerIdx = cleanData.findIndex(row => row.some(cell => cell.toUpperCase().includes('VENUE')));
+      if (headerIdx === -1) headerIdx = 0;
+
+      const headers = cleanData[headerIdx].map(h => h.trim());
+      const rows = cleanData.slice(headerIdx + 1);
+
+      // Cari indeks kolom
+      const venueCol = headers.findIndex(h => h.toUpperCase().includes('VENUE'));
+      const layananCol = headers.findIndex(h => h.toUpperCase().includes('LAYANAN'));
+      const doneCol = headers.findIndex(h => h.toUpperCase().includes('DONE') && !h.toUpperCase().includes('ACHIEVE'));
+      const achieveCol = headers.findIndex(h => h.toUpperCase().includes('ACHIEVE'));
+      const inputCol = headers.findIndex(h => h.toUpperCase().includes('INPUT'));
+      const ogpCol = headers.findIndex(h => h.toUpperCase().includes('OGP'));
+      const totalCol = headers.findIndex(h => h.toUpperCase().includes('TOTAL'));
+
+      // 1. Render Table Head
+      const tHead = document.getElementById('table-head');
+      tHead.innerHTML = `
+        <th>VENUE</th>
+        <th>LAYANAN</th>
+        <th>DONE</th>
+        <th>ACHIEVE (%)</th>
+        <th>INPUT ORDER</th>
+        <th>OGP</th>
+        <th>TOTAL</th>
+      `;
+
+      // 2. Render Table Body & Kumpulkan Data Chart
+      const tBody = document.getElementById('table-body');
+      tBody.innerHTML = '';
+
+      let venueDataMap = {};
+      let totalDoneSum = 0, totalInputSum = 0, totalOgpSum = 0, totalOverallSum = 0;
+      let lastVenue = '';
+
+      rows.forEach((row) => {
+        const venueName = row[venueCol] ? row[venueCol].trim() : '';
+        const isTotalRow = venueName.toUpperCase().includes('TOTAL');
+
+        if (isTotalRow) {
+          totalDoneSum = parseInt(row[doneCol]) || totalDoneSum;
+          totalInputSum = parseInt(row[inputCol]) || totalInputSum;
+          totalOgpSum = parseInt(row[ogpCol]) || totalOgpSum;
+          totalOverallSum = parseInt(row[totalCol]) || totalOverallSum;
+
+          const tr = document.createElement('tr');
+          tr.className = 'total-row';
+          tr.innerHTML = `
+            <td colspan="2">${venueName || 'TOTAL KESELURUHAN'}</td>
+            <td>${row[doneCol] || '-'}</td>
+            <td class="achieve-text">${row[achieveCol] || '-'}</td>
+            <td>${row[inputCol] || '-'}</td>
+            <td>${row[ogpCol] || '-'}</td>
+            <td>${row[totalCol] || '-'}</td>
+          `;
+          tBody.appendChild(tr);
+          return;
+        }
+
+        if (!venueName && !row[layananCol]) return;
+
+        const currentVenue = venueName || lastVenue;
+        if (venueName) lastVenue = venueName;
+
+        const isMainVenue = currentVenue.includes('★') || ['MEDIA CENTER', 'PADDOCK', 'PIT BUILDING', 'RACE CONTROL', 'TV COMPOUND', 'VIP DELUXE'].some(v => currentVenue.toUpperCase().includes(v));
+        
+        const doneVal = parseInt(row[doneCol]) || 0;
+        const inputVal = parseInt(row[inputCol]) || 0;
+        const ogpVal = parseInt(row[ogpCol]) || 0;
+
+        if (!venueDataMap[currentVenue]) {
+          venueDataMap[currentVenue] = { done: 0, input: 0, ogp: 0 };
+        }
+        venueDataMap[currentVenue].done += doneVal;
+        venueDataMap[currentVenue].input += inputVal;
+        venueDataMap[currentVenue].ogp += ogpVal;
+
+        const tr = document.createElement('tr');
+        if (isMainVenue) tr.className = 'row-main-venue';
+
+        tr.innerHTML = `
+          <td><strong>${venueName}</strong></td>
+          <td>${row[layananCol] || '-'}</td>
+          <td>${doneVal > 0 ? `<span class="badge badge-done">${doneVal}</span>` : '-'}</td>
+          <td class="achieve-text">${row[achieveCol] || '-'}</td>
+          <td>${inputVal > 0 ? `<span class="badge badge-input">${inputVal}</span>` : '-'}</td>
+          <td>${ogpVal > 0 ? `<span class="badge badge-ogp">${ogpVal}</span>` : '-'}</td>
+          <td>${row[totalCol] || '-'}</td>
+        `;
+        tBody.appendChild(tr);
+      });
+
+      // 3. Render Cards
+      document.getElementById('total-order').innerText = totalOverallSum || 219;
+      document.getElementById('total-input').innerText = totalInputSum;
+      document.getElementById('total-ogp').innerText = totalOgpSum;
+      document.getElementById('total-done').innerText = totalDoneSum;
+      
+      const achievePct = totalOverallSum ? ((totalDoneSum / totalOverallSum) * 100).toFixed(1).replace('.', ',') + '%' : '-';
+      document.getElementById('total-achieve').innerText = achievePct;
+
+      // 4. Render Charts
+      const venueLabels = Object.keys(venueDataMap);
+      const chartDone = venueLabels.map(v => venueDataMap[v].done);
+      const chartOgp = venueLabels.map(v => venueDataMap[v].ogp);
+      const chartInput = venueLabels.map(v => venueDataMap[v].input);
+
+      // Stacked Bar Chart
+      const ctxVenue = document.getElementById('venueChart').getContext('2d');
+      if (venueChart) venueChart.destroy();
+      venueChart = new Chart(ctxVenue, {
+        type: 'bar',
+        data: {
+          labels: venueLabels,
+          datasets: [
+            { label: 'DONE', data: chartDone, backgroundColor: '#059669' },
+            { label: 'OGP', data: chartOgp, backgroundColor: '#d97706' },
+            { label: 'INPUT ORDER', data: chartInput, backgroundColor: '#0284c7' }
+          ]
         },
-        scales: {
-          x: { stacked: true },
-          y: { stacked: true, beginAtZero: true }
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'top' } },
+          scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
         }
-      }
-    });
+      });
 
-    // Chart 2: Doughnut Chart Status Overall
-    const ctxStatus = document.getElementById('statusChart').getContext('2d');
-    new Chart(ctxStatus, {
-      type: 'doughnut',
-      data: {
-        labels: ['DONE', 'OGP', 'INPUT ORDER'],
-        datasets: [{
-          data: [64, 50, 53],
-          backgroundColor: ['#059669', '#d97706', '#0284c7']
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'bottom' }
+      // Doughnut Chart
+      const ctxStatus = document.getElementById('statusChart').getContext('2d');
+      if (statusChart) statusChart.destroy();
+      statusChart = new Chart(ctxStatus, {
+        type: 'doughnut',
+        data: {
+          labels: ['DONE', 'OGP', 'INPUT ORDER'],
+          datasets: [{
+            data: [totalDoneSum, totalOgpSum, totalInputSum],
+            backgroundColor: ['#059669', '#d97706', '#0284c7']
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom' } }
         }
-      }
-    });
+      });
+    }
   </script>
-
 </body>
 </html>
