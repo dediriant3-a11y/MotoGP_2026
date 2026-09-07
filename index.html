@@ -303,6 +303,7 @@
 </head>
 <body>
 
+  <!-- Header Section -->
   <div class="header">
     <div class="header-left">
       <div class="header-logos">
@@ -317,6 +318,7 @@
     <div class="badge-event">MOTOGP MANDALIKA 2026</div>
   </div>
 
+  <!-- Key Metrics Summary -->
   <div class="metrics-grid">
     <div class="metric-card total">
       <h3>Total Order/Site</h3>
@@ -340,6 +342,7 @@
     </div>
   </div>
 
+  <!-- Charts Section -->
   <div class="charts-grid">
     <div class="chart-card">
       <h2>Status Integrasi Per Venue</h2>
@@ -356,6 +359,7 @@
     </div>
   </div>
 
+  <!-- Detail Table Section -->
   <div class="table-card">
     <div class="table-header-flex">
       <h2>Rincian Data Per Venue & Layanan</h2>
@@ -384,6 +388,7 @@
   <script>
     const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS5lT9nqQFaO2f0Hl3WtpIL5Vq35tmHMmuCeHOuNbv2B33t3UPk11ysHKoiiKaSnsGuBHtTi5fh6zdR/pub?gid=670940536&single=true&output=csv';
 
+    // Daftar Venue Utama yang harus diprioritaskan di paling atas
     const mainVenuesList = ['MEDIA CENTER', 'PADDOCK', 'PIT BUILDING', 'RACE CONTROL', 'TV COMPOUND', 'VIP DELUXE'];
     let venueChart, statusChart;
 
@@ -410,8 +415,13 @@
     function renderDashboard(data) {
       if (!data || data.length === 0) return;
 
-      let colVenue = 0, colLayanan = 1, colDone = -1, colInput = -1, colOgp = -1;
+      let colVenue = 0;
+      let colLayanan = 1;
+      let colDone = -1;
+      let colInput = -1;
+      let colOgp = -1;
 
+      // 1. Deteksi Indeks Kolom Secara Dinamis
       data.forEach((row) => {
         row.forEach((cell, idx) => {
           let str = cell.trim().toUpperCase();
@@ -421,6 +431,7 @@
         });
       });
 
+      // Fallback jika tidak terdeteksi otomatis
       if (colDone === -1) colDone = 3;
       if (colInput === -1) colInput = 4;
       if (colOgp === -1) colOgp = 5;
@@ -428,12 +439,15 @@
       let parsedRows = [];
       let currentVenue = '';
 
+      // 2. Parsing Data Per Baris
       data.forEach((row) => {
         let firstCol = row[colVenue] ? row[colVenue].trim() : '';
         let secondCol = row[colLayanan] ? row[colLayanan].trim() : '';
 
+        // Hapus karakter buletin atau dash pembuka pivot (-)
         firstCol = firstCol.replace(/^[\-\+\s]+/, '').trim();
 
+        // Lewati header atau baris kalkulasi pivot
         if (firstCol.toUpperCase().includes('COUNTA OF') || secondCol.toUpperCase().includes('LAYANAN') || secondCol.toUpperCase().includes('STATUS INTEGRASI')) {
           return;
         }
@@ -465,76 +479,51 @@
         }
       });
 
-      // Grouping per Venue untuk keperluan penggabungan Teks Venue
-      let groupedByVenue = {};
-      parsedRows.forEach(item => {
-        if (!groupedByVenue[item.venue]) {
-          groupedByVenue[item.venue] = {
-            isMain: item.isMain,
-            items: []
-          };
-        }
-        groupedByVenue[item.venue].items.push(item);
+      // 3. Pengurutan: Prioritaskan Venue Utama di Atas
+      parsedRows.sort((a, b) => {
+        if (a.isMain && !b.isMain) return -1;
+        if (!a.isMain && b.isMain) return 1;
+        return a.venue.localeCompare(b.venue);
       });
 
-      // Urutkan Venue: Venue Utama dulu, lalu Venue Pendukung
-      let venueKeys = Object.keys(groupedByVenue);
-      venueKeys.sort((a, b) => {
-        let isMainA = groupedByVenue[a].isMain;
-        let isMainB = groupedByVenue[b].isMain;
-        if (isMainA && !isMainB) return -1;
-        if (!isMainA && isMainB) return 1;
-        return a.localeCompare(b);
-      });
-
+      // 4. Kalkulasi Total Keseluruhan
       let totalDoneSum = 0, totalInputSum = 0, totalOgpSum = 0, totalOverallSum = 0;
       let venueDataMap = {};
 
       const tBody = document.getElementById('table-body');
       tBody.innerHTML = '';
 
-      // Render Baris Tabel dengan Penggabungan Nama Venue
-      venueKeys.forEach(vKey => {
-        let group = groupedByVenue[vKey];
-        let items = group.items;
+      parsedRows.forEach(item => {
+        totalDoneSum += item.done;
+        totalInputSum += item.input;
+        totalOgpSum += item.ogp;
+        totalOverallSum += item.total;
 
-        items.forEach((item, index) => {
-          totalDoneSum += item.done;
-          totalInputSum += item.input;
-          totalOgpSum += item.ogp;
-          totalOverallSum += item.total;
+        if (!venueDataMap[item.venue]) {
+          venueDataMap[item.venue] = { done: 0, input: 0, ogp: 0, isMain: item.isMain };
+        }
+        venueDataMap[item.venue].done += item.done;
+        venueDataMap[item.venue].input += item.input;
+        venueDataMap[item.venue].ogp += item.ogp;
 
-          if (!venueDataMap[item.venue]) {
-            venueDataMap[item.venue] = { done: 0, input: 0, ogp: 0, isMain: item.isMain };
-          }
-          venueDataMap[item.venue].done += item.done;
-          venueDataMap[item.venue].input += item.input;
-          venueDataMap[item.venue].ogp += item.ogp;
+        const tr = document.createElement('tr');
+        if (item.isMain) tr.className = 'row-main-venue';
 
-          const tr = document.createElement('tr');
-          if (item.isMain) tr.className = 'row-main-venue';
+        const venueDisplayName = item.isMain && !item.venue.includes('★') ? `${item.venue} ★` : item.venue;
 
-          // Tampilkan teks Venue hanya di baris pertama tiap kelompok venue
-          let venueCellHtml = '';
-          if (index === 0) {
-            const venueDisplayName = item.isMain && !item.venue.includes('★') ? `${item.venue} ★` : item.venue;
-            venueCellHtml = `<strong>${venueDisplayName}</strong>`;
-          }
-
-          tr.innerHTML = `
-            <td>${venueCellHtml}</td>
-            <td>${item.layanan}</td>
-            <td>${item.done > 0 ? `<span class="badge badge-done">${item.done}</span>` : '-'}</td>
-            <td class="achieve-text">${item.achievePct}</td>
-            <td>${item.input > 0 ? `<span class="badge badge-input">${item.input}</span>` : '-'}</td>
-            <td>${item.ogp > 0 ? `<span class="badge badge-ogp">${item.ogp}</span>` : '-'}</td>
-            <td>${item.total}</td>
-          `;
-          tBody.appendChild(tr);
-        });
+        tr.innerHTML = `
+          <td><strong>${venueDisplayName}</strong></td>
+          <td>${item.layanan}</td>
+          <td>${item.done > 0 ? `<span class="badge badge-done">${item.done}</span>` : '-'}</td>
+          <td class="achieve-text">${item.achievePct}</td>
+          <td>${item.input > 0 ? `<span class="badge badge-input">${item.input}</span>` : '-'}</td>
+          <td>${item.ogp > 0 ? `<span class="badge badge-ogp">${item.ogp}</span>` : '-'}</td>
+          <td>${item.total}</td>
+        `;
+        tBody.appendChild(tr);
       });
 
-      // Baris Total Keseluruhan
+      // 5. Baris Total di Bawah Tabel
       const achieveOverallPct = totalOverallSum > 0 ? ((totalDoneSum / totalOverallSum) * 100).toFixed(1).replace('.', ',') + '%' : '0,0%';
       const trTotal = document.createElement('tr');
       trTotal.className = 'total-row';
@@ -548,30 +537,31 @@
       `;
       tBody.appendChild(trTotal);
 
-      // Card Metrics
+      // 6. Update Nilai Pada Card Metrics Ringkasan
       document.getElementById('total-order').innerText = totalOverallSum;
       document.getElementById('total-input').innerText = totalInputSum;
       document.getElementById('total-ogp').innerText = totalOgpSum;
       document.getElementById('total-done').innerText = totalDoneSum;
       document.getElementById('total-achieve').innerText = achieveOverallPct;
 
-      // Render Charts
-      const sortedVenuesForChart = Object.keys(venueDataMap).sort((a, b) => {
+      // 7. Render Charts dengan Urutan Venue Utama Di Depan
+      const sortedVenues = Object.keys(venueDataMap).sort((a, b) => {
         if (venueDataMap[a].isMain && !venueDataMap[b].isMain) return -1;
         if (!venueDataMap[a].isMain && venueDataMap[b].isMain) return 1;
         return a.localeCompare(b);
       });
 
-      const chartDone = sortedVenuesForChart.map(v => venueDataMap[v].done);
-      const chartOgp = sortedVenuesForChart.map(v => venueDataMap[v].ogp);
-      const chartInput = sortedVenuesForChart.map(v => venueDataMap[v].input);
+      const chartDone = sortedVenues.map(v => venueDataMap[v].done);
+      const chartOgp = sortedVenues.map(v => venueDataMap[v].ogp);
+      const chartInput = sortedVenues.map(v => venueDataMap[v].input);
 
+      // Bar Chart Per Venue
       const ctxVenue = document.getElementById('venueChart').getContext('2d');
       if (venueChart) venueChart.destroy();
       venueChart = new Chart(ctxVenue, {
         type: 'bar',
         data: {
-          labels: sortedVenuesForChart,
+          labels: sortedVenues,
           datasets: [
             { label: 'DONE', data: chartDone, backgroundColor: '#059669' },
             { label: 'OGP', data: chartOgp, backgroundColor: '#d97706' },
@@ -586,6 +576,7 @@
         }
       });
 
+      // Doughnut Chart Persentase Status
       const ctxStatus = document.getElementById('statusChart').getContext('2d');
       if (statusChart) statusChart.destroy();
       statusChart = new Chart(ctxStatus, {
