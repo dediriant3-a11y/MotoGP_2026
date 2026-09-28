@@ -449,12 +449,10 @@
 
         let done = cleanNum(row[colDone]);
         let ogp = cleanNum(row[colOgp]);
-        let rawInput = cleanNum(row[colInput]);
+        let input = cleanNum(row[colInput]);
 
-        // REVISI LOGIKA UTAMA:
-        // Input Order murni dikurangi data OGP/PROGRESS agar tidak terhitung ganda
-        let input = Math.max(0, rawInput - ogp); 
-
+        // LOGIKA BARU: Jika row dari sheet bertuliskan status INPUT ORDER eksplisit,
+        // gunakan nilainya secara langsung tanpa pengurangan.
         let total = done + input + ogp;
         let achievePct = total > 0 ? ((done / total) * 100).toFixed(1).replace('.', ',') + '%' : '0,0%';
 
@@ -550,7 +548,7 @@
       `;
       tBody.appendChild(trTotal);
 
-      // Update Card Metrics
+      // Update Card Metrics secara independen
       document.getElementById('total-order').innerText = totalOverallSum;
       document.getElementById('total-input').innerText = totalInputSum;
       document.getElementById('total-ogp').innerText = totalOgpSum;
