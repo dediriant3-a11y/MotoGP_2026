@@ -51,7 +51,6 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background-image: url('images/bg-motogp.jpg');
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
@@ -311,7 +310,7 @@
       </div>
       <div class="header-title">
         <h1>Dashboard Resume Integrasi Layanan</h1>
-        <p>Sumber Data: Live Google Spreadsheet (Sheet RESUME)</p>
+        <p>Sumber Data: Live Google Spreadsheet</p>
       </div>
     </div>
     <div class="badge-event">MOTOGP MANDALIKA 2026</div>
@@ -382,7 +381,9 @@
   </div>
 
   <script>
-    const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS5lT9nqQFaO2f0Hl3WtpIL5Vq35tmHMmuCeHOuNbv2B33t3UPk11ysHKoiiKaSnsGuBHtTi5fh6zdR/pub?gid=670940536&single=true&output=csv';
+    // URL CSV Google Sheet (Ditambahkan timestamp _nocache agar data selalu paling baru)
+    const baseUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS5lT9nqQFaO2f0Hl3WtpIL5Vq35tmHMmuCeHOuNbv2B33t3UPk11ysHKoiiKaSnsGuBHtTi5fh6zdR/pub?gid=670940536&single=true&output=csv';
+    const csvUrl = baseUrl + '&_nocache=' + new Date().getTime();
 
     const mainVenuesList = ['MEDIA CENTER', 'PADDOCK', 'PIT BUILDING', 'RACE CONTROL', 'TV COMPOUND', 'VIP DELUXE'];
     let venueChart, statusChart;
@@ -390,7 +391,7 @@
     Papa.parse(csvUrl, {
       download: true,
       header: false,
-      skipEmptyLines: false,
+      skipEmptyLines: true,
       complete: function(results) {
         renderDashboard(results.data);
       }
@@ -410,32 +411,38 @@
     function renderDashboard(data) {
       if (!data || data.length === 0) return;
 
-      let colVenue = 0, colLayanan = 1, colDone = -1, colInput = -1, colOgp = -1;
+      let colVenue = 0, colLayanan = 1, colStatus = -1;
+      let colDone = -1, colInput = -1, colOgp = -1;
+      let isPivotFormat = false;
 
+      // 1. Deteksi Struktur Kolom dari Header
       data.forEach((row) => {
         row.forEach((cell, idx) => {
           let str = cell.trim().toUpperCase();
+          if (str === 'STATUS INTEGRASI' || str.includes('STATUS')) colStatus = idx;
           if (str === 'DONE') colDone = idx;
           if (str === 'INPUT ORDER') colInput = idx;
-          if (str === 'OGP' || str === 'PROGRESS' || str.includes('PROGRESS') || str.includes('ON GOING')) {
-            colOgp = idx;
-          }
+          if (str === 'OGP' || str === 'PROGRESS' || str.includes('PROGRESS')) colOgp = idx;
         });
       });
 
-      if (colDone === -1) colDone = 3;
-      if (colInput === -1) colInput = 4;
-      if (colOgp === -1) colOgp = 5;
+      // Jika menemukan kolom khusus 'DONE' & 'INPUT ORDER', berarti file menggunakan format agregat Pivot
+      if (colDone !== -1 && colInput !== -1) {
+        isPivotFormat = true;
+      }
 
       let parsedRows = [];
       let currentVenue = '';
 
-      data.forEach((row) => {
+      data.forEach((row, rowIndex) => {
+        if (rowIndex === 0) return; // Skip Header
+
         let firstCol = row[colVenue] ? row[colVenue].trim() : '';
         let secondCol = row[colLayanan] ? row[colLayanan].trim() : '';
 
         firstCol = firstCol.replace(/^[\-\+\s]+/, '').trim();
 
+        // Skip Baris Judul Rumus
         if (firstCol.toUpperCase().includes('COUNTA OF') || secondCol.toUpperCase().includes('LAYANAN') || secondCol.toUpperCase().includes('STATUS INTEGRASI')) {
           return;
         }
@@ -447,12 +454,28 @@
         const layanan = secondCol;
         if (!layanan || layanan === '0') return;
 
-        let done = cleanNum(row[colDone]);
-        let ogp = cleanNum(row[colOgp]);
-        let input = cleanNum(row[colInput]);
+        let done = 0, input = 0, ogp = 0;
 
-        // LOGIKA BARU: Jika row dari sheet bertuliskan status INPUT ORDER eksplisit,
-        // gunakan nilainya secara langsung tanpa pengurangan.
+        if (isPivotFormat) {
+          // A. Pengolahan Data Pivot
+          done = cleanNum(row[colDone]);
+          input = cleanNum(row[colInput]);
+          ogp = colOgp !== -1 ? cleanNum(row[colOgp]) : 0;
+        } else {
+          // B. Pengolahan Data Per Baris (Murni Berdasarkan KATA KUNCI STATUS INTEGRASI)
+          let statusIntegrasi = colStatus !== -1 && row[colStatus] ? row[colStatus].trim().toUpperCase() : '';
+
+          if (statusIntegrasi === 'DONE') {
+            done = 1;
+          } else if (statusIntegrasi === 'PROGRESS') {
+            // Sesuai Kata Kunci: STATUS INTEGRASI bernilai PROGRESS = OGP (On Going)
+            ogp = 1;
+          } else if (statusIntegrasi === 'INPUT ORDER' || statusIntegrasi === '') {
+            // Sesuai Kata Kunci: STATUS INTEGRASI bernilai INPUT ORDER = INPUT ORDER
+            input = 1;
+          }
+        }
+
         let total = done + input + ogp;
         let achievePct = total > 0 ? ((done / total) * 100).toFixed(1).replace('.', ',') + '%' : '0,0%';
 
@@ -470,6 +493,7 @@
         }
       });
 
+      // Grouping per Venue
       let groupedByVenue = {};
       parsedRows.forEach(item => {
         if (!groupedByVenue[item.venue]) {
@@ -535,6 +559,7 @@
         });
       });
 
+      // Total Keseluruhan
       const achieveOverallPct = totalOverallSum > 0 ? ((totalDoneSum / totalOverallSum) * 100).toFixed(1).replace('.', ',') + '%' : '0,0%';
       const trTotal = document.createElement('tr');
       trTotal.className = 'total-row';
@@ -548,7 +573,7 @@
       `;
       tBody.appendChild(trTotal);
 
-      // Update Card Metrics secara independen
+      // Kartu Ringkasan Utama
       document.getElementById('total-order').innerText = totalOverallSum;
       document.getElementById('total-input').innerText = totalInputSum;
       document.getElementById('total-ogp').innerText = totalOgpSum;
