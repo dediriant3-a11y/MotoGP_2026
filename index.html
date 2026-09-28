@@ -412,13 +412,11 @@
 
       let colVenue = 0, colLayanan = 1, colDone = -1, colInput = -1, colOgp = -1;
 
-      // Cari indeks kolom berdasarkan nama header di CSV
       data.forEach((row) => {
         row.forEach((cell, idx) => {
           let str = cell.trim().toUpperCase();
           if (str === 'DONE') colDone = idx;
           if (str === 'INPUT ORDER') colInput = idx;
-          // PERUBAHAN DI SINI: Deteksi header 'PROGRESS', 'OGP', atau 'ON GOING' sebagai kolom OGP
           if (str === 'OGP' || str === 'PROGRESS' || str.includes('PROGRESS') || str.includes('ON GOING')) {
             colOgp = idx;
           }
@@ -450,8 +448,13 @@
         if (!layanan || layanan === '0') return;
 
         let done = cleanNum(row[colDone]);
-        let input = cleanNum(row[colInput]);
-        let ogp = cleanNum(row[colOgp]); // Angka dari kolom OGP / PROGRESS
+        let ogp = cleanNum(row[colOgp]);
+        let rawInput = cleanNum(row[colInput]);
+
+        // REVISI LOGIKA UTAMA:
+        // Input Order murni dikurangi data OGP/PROGRESS agar tidak terhitung ganda
+        let input = Math.max(0, rawInput - ogp); 
+
         let total = done + input + ogp;
         let achievePct = total > 0 ? ((done / total) * 100).toFixed(1).replace('.', ',') + '%' : '0,0%';
 
@@ -469,7 +472,6 @@
         }
       });
 
-      // Grouping per Venue untuk keperluan penggabungan Teks Venue
       let groupedByVenue = {};
       parsedRows.forEach(item => {
         if (!groupedByVenue[item.venue]) {
@@ -481,7 +483,6 @@
         groupedByVenue[item.venue].items.push(item);
       });
 
-      // Urutkan Venue: Venue Utama dulu, lalu Venue Pendukung
       let venueKeys = Object.keys(groupedByVenue);
       venueKeys.sort((a, b) => {
         let isMainA = groupedByVenue[a].isMain;
@@ -497,7 +498,6 @@
       const tBody = document.getElementById('table-body');
       tBody.innerHTML = '';
 
-      // Render Baris Tabel dengan Penggabungan Nama Venue
       venueKeys.forEach(vKey => {
         let group = groupedByVenue[vKey];
         let items = group.items;
@@ -518,7 +518,6 @@
           const tr = document.createElement('tr');
           if (item.isMain) tr.className = 'row-main-venue';
 
-          // Tampilkan teks Venue hanya di baris pertama tiap kelompok venue
           let venueCellHtml = '';
           if (index === 0) {
             const venueDisplayName = item.isMain && !item.venue.includes('★') ? `${item.venue} ★` : item.venue;
@@ -538,7 +537,6 @@
         });
       });
 
-      // Baris Total Keseluruhan
       const achieveOverallPct = totalOverallSum > 0 ? ((totalDoneSum / totalOverallSum) * 100).toFixed(1).replace('.', ',') + '%' : '0,0%';
       const trTotal = document.createElement('tr');
       trTotal.className = 'total-row';
@@ -552,7 +550,7 @@
       `;
       tBody.appendChild(trTotal);
 
-      // Card Metrics
+      // Update Card Metrics
       document.getElementById('total-order').innerText = totalOverallSum;
       document.getElementById('total-input').innerText = totalInputSum;
       document.getElementById('total-ogp').innerText = totalOgpSum;
