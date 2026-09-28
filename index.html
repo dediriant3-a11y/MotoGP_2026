@@ -319,7 +319,7 @@
 
   <div class="metrics-grid">
     <div class="metric-card total">
-      <h3>Total Order<h3>
+      <h3>Total Order</h3>
       <div class="value" id="total-order" style="color: var(--primary-light)">-</div>
     </div>
     <div class="metric-card input">
@@ -412,12 +412,16 @@
 
       let colVenue = 0, colLayanan = 1, colDone = -1, colInput = -1, colOgp = -1;
 
+      // Cari indeks kolom berdasarkan nama header di CSV
       data.forEach((row) => {
         row.forEach((cell, idx) => {
           let str = cell.trim().toUpperCase();
           if (str === 'DONE') colDone = idx;
           if (str === 'INPUT ORDER') colInput = idx;
-          if (str === 'OGP') colOgp = idx;
+          // PERUBAHAN DI SINI: Deteksi header 'PROGRESS', 'OGP', atau 'ON GOING' sebagai kolom OGP
+          if (str === 'OGP' || str === 'PROGRESS' || str.includes('PROGRESS') || str.includes('ON GOING')) {
+            colOgp = idx;
+          }
         });
       });
 
@@ -447,7 +451,7 @@
 
         let done = cleanNum(row[colDone]);
         let input = cleanNum(row[colInput]);
-        let ogp = cleanNum(row[colOgp]);
+        let ogp = cleanNum(row[colOgp]); // Angka dari kolom OGP / PROGRESS
         let total = done + input + ogp;
         let achievePct = total > 0 ? ((done / total) * 100).toFixed(1).replace('.', ',') + '%' : '0,0%';
 
