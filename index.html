@@ -256,24 +256,34 @@
     }
 
     td {
-      padding: 12px 16px;
+      padding: 10px 16px;
       border-bottom: 1px solid var(--border);
     }
 
-    tr.row-main-venue {
-      background-color: var(--main-venue-bg);
+    /* Style Pengelompokan Venue */
+    tr.venue-group-row {
+      background-color: #e2e8f0;
+      font-weight: 700;
+      font-size: 14px;
+      color: #1e293b;
     }
 
-    tr.row-main-venue td {
-      border-bottom: 1px solid var(--main-venue-border);
-    }
-
-    tr:hover {
-      background-color: rgba(226, 232, 240, 0.8);
-    }
-
-    tr.row-main-venue:hover {
+    tr.venue-group-row.row-main-venue {
       background-color: #fef08a;
+      color: #713f12;
+    }
+
+    tr.layanan-row {
+      background-color: rgba(255, 255, 255, 0.6);
+    }
+
+    tr.layanan-row:hover {
+      background-color: rgba(241, 245, 249, 0.9);
+    }
+
+    .layanan-indent {
+      padding-left: 32px;
+      color: #475569;
     }
 
     .badge {
@@ -363,7 +373,7 @@
       <table>
         <thead>
           <tr>
-            <th>VENUE</th>
+            <th>VENUE / LAYANAN</th>
             <th>LAYANAN</th>
             <th>DONE</th>
             <th>ACHIEVE (%)</th>
@@ -380,9 +390,7 @@
   </div>
 
   <script>
-    // ID Spreadsheet Anda
     const SPREADSHEET_ID = '1NwGLVPSDtvWuHVRDnVuJx7ontrfllX6Yu-9HIrjw364';
-    // Mengambil data sheet utama via GViz API tanpa tunda cache
     const gvizUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=Sheet1&_nocache=${new Date().getTime()}`;
 
     const mainVenuesList = ['MEDIA CENTER', 'PADDOCK', 'PIT BUILDING', 'RACE CONTROL', 'TV COMPOUND', 'VIP DELUXE'];
@@ -392,8 +400,6 @@
       try {
         const response = await fetch(gvizUrl);
         const text = await response.text();
-        
-        // Membersihkan wrapper JSON gviz
         const jsonString = text.substring(47, text.length - 2);
         const data = JSON.parse(jsonString);
 
@@ -412,11 +418,9 @@
       if (!table || !table.rows) return;
 
       let rows = table.rows;
-      
-      // Pemetaan Kolom Otomatis dari Header
-      let colVenue = 1;   // Default Kolom B (Venue)
-      let colLayanan = 2; // Default Kolom C (Layanan)
-      let colStatus = 23; // Default Kolom X (STATUS INTEGRASI)
+      let colVenue = 1;   
+      let colLayanan = 2; 
+      let colStatus = 23; 
 
       if (table.cols) {
         table.cols.forEach((col, idx) => {
@@ -433,105 +437,118 @@
       let ogpSum = 0;
       let doneSum = 0;
 
-      let venueSummary = {};
+      // Structure: { "VENUE_NAME": { isMain: true, done: 0, ogp: 0, input: 0, total: 0, layananMap: { "ASTINET": {done, ogp, input, total} } } }
+      let groupedVenues = {};
 
       rows.forEach((row) => {
         if (!row.c) return;
 
-        // Ambil nilai cell
         let venue = row.c[colVenue] && row.c[colVenue].v ? row.c[colVenue].v.toString().trim() : '';
         let layanan = row.c[colLayanan] && row.c[colLayanan].v ? row.c[colLayanan].v.toString().trim() : 'Layanan';
         let status = row.c[colStatus] && row.c[colStatus].v ? row.c[colStatus].v.toString().trim().toUpperCase() : 'INPUT ORDER';
 
-        // Filter jika baris kosong / header terikut
         if (!venue || venue.toUpperCase() === 'VENUE' || venue.toUpperCase().includes('TOTAL')) return;
 
-        totalOrder++; // 1. Total Order = Jumlah seluruh baris data order
+        totalOrder++;
 
-        let isDone = 0;
-        let isOgp = 0;
-        let isInput = 0;
+        let isDone = 0, isOgp = 0, isInput = 0;
 
-        // LOGIKA UTAMA PERHITUNGAN STATUS INTEGRASI:
         if (status === 'DONE') {
-          // 4. DONE = STATUS INTEGRASI yang berisi DONE
-          doneSum++;
-          isDone = 1;
+          doneSum++; isDone = 1;
         } else if (status === 'PROGRESS') {
-          // 3. OGP (On Going) = STATUS INTEGRASI yang berisi PROGRESS
-          ogpSum++;
-          isOgp = 1;
+          ogpSum++; isOgp = 1;
         } else {
-          // 2. INPUT ORDER = STATUS INTEGRASI yang berisi INPUT ORDER (atau status awal)
-          inputOrderSum++;
-          isInput = 1;
+          inputOrderSum++; isInput = 1;
         }
 
-        // Grouping per Venue & Layanan
-        let key = `${venue}___${layanan}`;
-        if (!venueSummary[key]) {
-          venueSummary[key] = {
-            venue: venue,
-            layanan: layanan,
+        // Inisialisasi Venue Group
+        if (!groupedVenues[venue]) {
+          groupedVenues[venue] = {
+            venueName: venue,
             isMain: isMainVenue(venue),
             done: 0,
             ogp: 0,
             input: 0,
-            total: 0
+            total: 0,
+            layananMap: {}
           };
         }
 
-        venueSummary[key].done += isDone;
-        venueSummary[key].ogp += isOgp;
-        venueSummary[key].input += isInput;
-        venueSummary[key].total += 1;
+        // Accumulate Total Venue
+        groupedVenues[venue].done += isDone;
+        groupedVenues[venue].ogp += isOgp;
+        groupedVenues[venue].input += isInput;
+        groupedVenues[venue].total += 1;
+
+        // Accumulate Layanan under Venue
+        if (!groupedVenues[venue].layananMap[layanan]) {
+          groupedVenues[venue].layananMap[layanan] = { done: 0, ogp: 0, input: 0, total: 0 };
+        }
+        groupedVenues[venue].layananMap[layanan].done += isDone;
+        groupedVenues[venue].layananMap[layanan].ogp += isOgp;
+        groupedVenues[venue].layananMap[layanan].input += isInput;
+        groupedVenues[venue].layananMap[layanan].total += 1;
       });
 
-      // 5. ACHIEVE DONE (%) = prosentasi DONE terhadap jumlah total order
       let achievePctOverall = totalOrder > 0 ? ((doneSum / totalOrder) * 100).toFixed(1).replace('.', ',') + '%' : '0,0%';
 
-      // Update Card Metrics Tampilan
+      // Update Card Metrics
       document.getElementById('total-order').innerText = totalOrder;
       document.getElementById('total-input').innerText = inputOrderSum;
       document.getElementById('total-ogp').innerText = ogpSum;
       document.getElementById('total-done').innerText = doneSum;
       document.getElementById('total-achieve').innerText = achievePctOverall;
 
-      // Render Baris Tabel
+      // Render Tabel dengan Pengelompokan Venue
       const tBody = document.getElementById('table-body');
       tBody.innerHTML = '';
 
-      let aggregatedVenues = {};
-
-      Object.values(venueSummary).forEach(item => {
-        let achieveRow = item.total > 0 ? ((item.done / item.total) * 100).toFixed(1).replace('.', ',') + '%' : '0,0%';
-
-        if (!aggregatedVenues[item.venue]) {
-          aggregatedVenues[item.venue] = { done: 0, ogp: 0, input: 0, total: 0, isMain: item.isMain };
-        }
-        aggregatedVenues[item.venue].done += item.done;
-        aggregatedVenues[item.venue].ogp += item.ogp;
-        aggregatedVenues[item.venue].input += item.input;
-        aggregatedVenues[item.venue].total += item.total;
-
-        const tr = document.createElement('tr');
-        if (item.isMain) tr.className = 'row-main-venue';
-
-        const venueDisplayName = item.isMain && !item.venue.includes('★') ? `${item.venue} ★` : item.venue;
-
-        tr.innerHTML = `
-          <td><strong>${venueDisplayName}</strong></td>
-          <td>${item.layanan}</td>
-          <td>${item.done > 0 ? `<span class="badge badge-done">${item.done}</span>` : '-'}</td>
-          <td class="achieve-text">${achieveRow}</td>
-          <td>${item.input > 0 ? `<span class="badge badge-input">${item.input}</span>` : '-'}</td>
-          <td>${item.ogp > 0 ? `<span class="badge badge-ogp">${item.ogp}</span>` : '-'}</td>
-          <td>${item.total}</td>
-        `;
-        tBody.appendChild(tr);
+      let venueList = Object.keys(groupedVenues).sort((a, b) => {
+        if (groupedVenues[a].isMain && !groupedVenues[b].isMain) return -1;
+        if (!groupedVenues[a].isMain && groupedVenues[b].isMain) return 1;
+        return a.localeCompare(b);
       });
 
-      // Baris Total Keseluruhan
+      venueList.forEach(vName => {
+        let vData = groupedVenues[vName];
+        let vAchieve = vData.total > 0 ? ((vData.done / vData.total) * 100).toFixed(1).replace('.', ',') + '%' : '0,0%';
+        let displayName = vData.isMain && !vName.includes('★') ? `${vName} ★` : vName;
+
+        // 1. BARIS HEADER VENUE (Group Header)
+        const trVenueHeader = document.createElement('tr');
+        trVenueHeader.className = `venue-group-row ${vData.isMain ? 'row-main-venue' : ''}`;
+        trVenueHeader.innerHTML = `
+          <td><strong>${displayName}</strong></td>
+          <td><em>(Total Venue)</em></td>
+          <td>${vData.done > 0 ? `<span class="badge badge-done">${vData.done}</span>` : '-'}</td>
+          <td class="achieve-text">${vAchieve}</td>
+          <td>${vData.input > 0 ? `<span class="badge badge-input">${vData.input}</span>` : '-'}</td>
+          <td>${vData.ogp > 0 ? `<span class="badge badge-ogp">${vData.ogp}</span>` : '-'}</td>
+          <td><strong>${vData.total}</strong></td>
+        `;
+        tBody.appendChild(trVenueHeader);
+
+        // 2. BARIS SUB-LAYANAN Di Bawah Venue Terkait
+        Object.keys(vData.layananMap).forEach(layName => {
+          let lData = vData.layananMap[layName];
+          let lAchieve = lData.total > 0 ? ((lData.done / lData.total) * 100).toFixed(1).replace('.', ',') + '%' : '0,0%';
+
+          const trLayanan = document.createElement('tr');
+          trLayanan.className = 'layanan-row';
+          trLayanan.innerHTML = `
+            <td></td>
+            <td class="layanan-indent">↳ ${layName}</td>
+            <td>${lData.done > 0 ? `<span class="badge badge-done">${lData.done}</span>` : '-'}</td>
+            <td class="achieve-text">${lAchieve}</td>
+            <td>${lData.input > 0 ? `<span class="badge badge-input">${lData.input}</span>` : '-'}</td>
+            <td>${lData.ogp > 0 ? `<span class="badge badge-ogp">${lData.ogp}</span>` : '-'}</td>
+            <td>${lData.total}</td>
+          `;
+          tBody.appendChild(trLayanan);
+        });
+      });
+
+      // BARIS TOTAL KESELURUHAN
       const trTotal = document.createElement('tr');
       trTotal.className = 'total-row';
       trTotal.innerHTML = `
@@ -545,22 +562,16 @@
       tBody.appendChild(trTotal);
 
       // Render Charts
-      const sortedVenues = Object.keys(aggregatedVenues).sort((a, b) => {
-        if (aggregatedVenues[a].isMain && !aggregatedVenues[b].isMain) return -1;
-        if (!aggregatedVenues[a].isMain && aggregatedVenues[b].isMain) return 1;
-        return a.localeCompare(b);
-      });
-
-      const chartDone = sortedVenues.map(v => aggregatedVenues[v].done);
-      const chartOgp = sortedVenues.map(v => aggregatedVenues[v].ogp);
-      const chartInput = sortedVenues.map(v => aggregatedVenues[v].input);
+      const chartDone = venueList.map(v => groupedVenues[v].done);
+      const chartOgp = venueList.map(v => groupedVenues[v].ogp);
+      const chartInput = venueList.map(v => groupedVenues[v].input);
 
       const ctxVenue = document.getElementById('venueChart').getContext('2d');
       if (venueChart) venueChart.destroy();
       venueChart = new Chart(ctxVenue, {
         type: 'bar',
         data: {
-          labels: sortedVenues,
+          labels: venueList,
           datasets: [
             { label: 'DONE', data: chartDone, backgroundColor: '#059669' },
             { label: 'OGP', data: chartOgp, backgroundColor: '#d97706' },
@@ -594,7 +605,6 @@
       });
     }
 
-    // Jalankan pertama kali & auto-refresh setiap 30 detik
     fetchSpreadsheetData();
     setInterval(fetchSpreadsheetData, 30000);
   </script>
