@@ -332,7 +332,7 @@
       <div class="value" id="total-order" style="color: var(--primary-light)">-</div>
     </div>
     <div class="metric-card input">
-      <h3>INPUT ORDER</h3>
+      <h3>HOLD</h3>
       <div class="value" id="total-input" style="color: var(--color-input)">-</div>
     </div>
     <div class="metric-card ogp">
@@ -470,7 +470,7 @@
           ogpSum++; 
           isOgp = 1;
         } else {
-          // Sisanya (termasuk status INPUT ORDER atau kosong) = INPUT ORDER
+          // Sisanya (termasuk status HOLD atau kosong) = HOLD
           inputOrderSum++; 
           isInput = 1;
         }
@@ -587,7 +587,7 @@
           datasets: [
             { label: 'DONE', data: chartDone, backgroundColor: '#059669' },
             { label: 'OGP', data: chartOgp, backgroundColor: '#d97706' },
-            { label: 'INPUT ORDER', data: chartInput, backgroundColor: '#0284c7' }
+            { label: 'HOLD', data: chartInput, backgroundColor: '#0284c7' }
           ]
         },
         options: {
@@ -603,7 +603,7 @@
       statusChart = new Chart(ctxStatus, {
         type: 'doughnut',
         data: {
-          labels: ['DONE', 'OGP', 'INPUT ORDER'],
+          labels: ['DONE', 'OGP', 'HOLD'],
           datasets: [{
             data: [doneSum, ogpSum, inputOrderSum],
             backgroundColor: ['#059669', '#d97706', '#0284c7']
